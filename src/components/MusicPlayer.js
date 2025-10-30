@@ -59,8 +59,19 @@ export class MusicPlayer {
     );
 
     this.updateTrackDisplay();
+    this.updatePlayPauseButton(); // Update button state based on actual playback
     this.addEventListeners();
     this.startProgressTracking();
+  }
+
+  /**
+   * Update play/pause button to reflect current state
+   */
+  updatePlayPauseButton() {
+    const btn = this.element?.querySelector('.player-play-pause');
+    if (btn) {
+      btn.textContent = this.music.isPlaying ? '⏸' : '▶️';
+    }
   }
 
   createElement() {
@@ -648,7 +659,7 @@ export class MusicPlayer {
     </style>`;
   }
 
-  initializeVisualizer() {
+  async initializeVisualizer() {
     this.canvas = this.element.querySelector('.player-visualizer');
     if (!this.canvas) return;
 
@@ -658,6 +669,11 @@ export class MusicPlayer {
     try {
       if (!this.audioContext) {
         this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      }
+
+      // CRITICAL FIX: Resume AudioContext if suspended (required on mobile)
+      if (this.audioContext.state === 'suspended') {
+        await this.audioContext.resume();
       }
 
       // Connect to audio source if available
@@ -675,10 +691,11 @@ export class MusicPlayer {
       this.drawVisualizer();
     } catch (error) {
       console.warn('Audio visualizer not available:', error);
-      // Hide canvas if visualizer can't be initialized
+      // Hide canvas if visualizer can't be initialized (graceful degradation)
       if (this.canvas) {
         this.canvas.style.display = 'none';
       }
+      // IMPORTANT: Don't let visualizer failure stop music playback
     }
   }
 
@@ -903,7 +920,7 @@ export class MusicPlayer {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   }
 
-  togglePlayPause() {
+  async togglePlayPause() {
     const btn = this.element.querySelector('.player-play-pause');
 
     if (this.music.isPlaying) {
@@ -916,6 +933,15 @@ export class MusicPlayer {
         this.animationId = null;
       }
     } else {
+      // MOBILE FIX: Resume audio context on user interaction
+      if (this.audioContext && this.audioContext.state === 'suspended') {
+        try {
+          await this.audioContext.resume();
+        } catch (error) {
+          console.warn('Failed to resume audio context:', error);
+        }
+      }
+
       this.music.resume();
       btn.textContent = '⏸';
 

@@ -128,10 +128,18 @@ export class BackgroundMusic {
 
       // Fade in
       this.currentTrack.volume = 0;
-      await this.currentTrack.play();
-      this.fadeIn(this.currentTrack);
 
-      this.isPlaying = true;
+      // MOBILE FIX: Try to play, handle autoplay policy errors gracefully
+      try {
+        await this.currentTrack.play();
+        this.fadeIn(this.currentTrack);
+        this.isPlaying = true;
+      } catch (playError) {
+        // Mobile browsers may block autoplay - user will need to click play button
+        console.warn('Autoplay blocked (likely mobile):', playError);
+        // Keep isPlaying false so play button shows correctly
+        this.isPlaying = false;
+      }
 
       // Set up auto-advance to next track
       this.currentTrack.addEventListener('ended', () => this.playNextTrack());
@@ -368,10 +376,18 @@ export class BackgroundMusic {
   /**
    * Resume music
    */
-  resume() {
+  async resume() {
     if (this.currentTrack && !this.isPlaying) {
-      this.currentTrack.play();
-      this.isPlaying = true;
+      try {
+        await this.currentTrack.play();
+        this.isPlaying = true;
+        // Ensure volume is at correct level
+        if (this.currentTrack.volume === 0) {
+          this.fadeIn(this.currentTrack);
+        }
+      } catch (error) {
+        console.warn('Failed to resume playback:', error);
+      }
     }
   }
 
