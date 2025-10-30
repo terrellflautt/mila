@@ -289,6 +289,7 @@ const styles = `
   left: 0;
   width: 100%;
   height: 100vh;
+  height: 100dvh; /* Dynamic viewport height for mobile */
   background: rgba(0, 0, 0, 0.92);
   backdrop-filter: blur(12px);
   display: flex;
@@ -296,14 +297,17 @@ const styles = `
   justify-content: center;
   z-index: 10000;
   padding: 20px;
+  padding-bottom: max(20px, env(safe-area-inset-bottom)); /* Safe area for notched phones */
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
 }
 
 .poem-reward-container {
   position: relative;
   max-width: 900px;
   width: 100%;
-  max-height: 90vh;
+  max-height: calc(100vh - 40px);
+  max-height: calc(100dvh - 40px - env(safe-area-inset-bottom)); /* Account for safe areas */
   background: linear-gradient(135deg, rgba(26, 26, 26, 0.98) 0%, rgba(20, 20, 20, 0.98) 100%);
   border-radius: 24px;
   border: 1px solid rgba(255, 182, 193, 0.2);
@@ -311,12 +315,16 @@ const styles = `
     0 20px 80px rgba(0, 0, 0, 0.6),
     0 0 100px rgba(255, 182, 193, 0.1);
   overflow: hidden;
+  margin: auto; /* Center vertically when smaller than viewport */
 }
 
 .poem-reward-content {
   padding: 3rem 2.5rem 2rem;
   overflow-y: auto;
-  max-height: 90vh;
+  overflow-x: hidden;
+  max-height: calc(100vh - 40px);
+  max-height: calc(100dvh - 40px - env(safe-area-inset-bottom));
+  -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
 }
 
 .poem-personal-message {
@@ -447,6 +455,8 @@ const styles = `
   border-radius: 12px;
   cursor: pointer;
   transition: all 0.3s ease;
+  /* Ensure button is always visible on mobile */
+  margin-bottom: max(2rem, env(safe-area-inset-bottom, 1rem));
 }
 
 .poem-close-btn:hover {
@@ -477,8 +487,21 @@ const styles = `
 
 /* Mobile responsive */
 @media (max-width: 768px) {
+  .poem-reward-overlay {
+    padding: 15px;
+    padding-bottom: max(15px, env(safe-area-inset-bottom));
+  }
+
+  .poem-reward-container {
+    border-radius: 20px;
+    max-height: calc(100vh - 30px);
+    max-height: calc(100dvh - 30px - env(safe-area-inset-bottom));
+  }
+
   .poem-reward-content {
-    padding: 2rem 1.5rem 1.5rem;
+    padding: 2rem 1.5rem 1rem;
+    max-height: calc(100vh - 30px);
+    max-height: calc(100dvh - 30px - env(safe-area-inset-bottom));
   }
 
   .poem-title {
@@ -508,10 +531,28 @@ const styles = `
   .poem-close-btn {
     padding: 0.875rem 2rem;
     font-size: 0.9rem;
+    margin: 2.5rem auto 1rem;
+    margin-bottom: max(1.5rem, calc(env(safe-area-inset-bottom) + 1rem));
   }
 }
 
 @media (max-width: 480px) {
+  .poem-reward-overlay {
+    padding: 10px;
+    padding-bottom: max(10px, env(safe-area-inset-bottom));
+  }
+
+  .poem-reward-container {
+    max-height: calc(100vh - 20px);
+    max-height: calc(100dvh - 20px - env(safe-area-inset-bottom));
+  }
+
+  .poem-reward-content {
+    padding: 1.5rem 1rem 0.5rem;
+    max-height: calc(100vh - 20px);
+    max-height: calc(100dvh - 20px - env(safe-area-inset-bottom));
+  }
+
   .poem-title {
     font-size: 1.75rem;
   }
@@ -523,6 +564,11 @@ const styles = `
   .poem-favorite-badge {
     font-size: 0.75rem;
     padding: 0.4rem 1rem;
+  }
+
+  .poem-close-btn {
+    margin: 2rem auto 1rem;
+    margin-bottom: max(1rem, calc(env(safe-area-inset-bottom) + 0.5rem));
   }
 }
 `;
