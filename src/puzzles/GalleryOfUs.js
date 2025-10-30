@@ -418,12 +418,17 @@ export class GalleryOfUs {
             padding: max(1rem, env(safe-area-inset-top)) max(0.5rem, env(safe-area-inset-right)) max(1rem, env(safe-area-inset-bottom)) max(0.5rem, env(safe-area-inset-left));
           }
 
+          .gallery-of-us {
+            padding: max(1rem, env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right)) max(1rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
+          }
+
           .gallery-container {
             gap: 1.5rem;
           }
 
           .gallery-header {
-            padding-top: 2.5rem;
+            /* Remove extra padding-top on mobile - already have safe-area padding */
+            padding-top: 0;
           }
 
           .gallery-title {
@@ -442,6 +447,11 @@ export class GalleryOfUs {
             grid-template-columns: 1fr;
             gap: 1.5rem;
             padding: 0.5rem;
+          }
+
+          .gallery-exit-btn {
+            top: max(0.5rem, env(safe-area-inset-top));
+            right: max(0.5rem, env(safe-area-inset-right));
           }
         }
       </style>
