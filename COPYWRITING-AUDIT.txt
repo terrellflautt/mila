@@ -1,0 +1,692 @@
+================================================================================
+                    MILA'S WORLD - COPYWRITING AUDIT
+           All user-facing text for revision in personal voice
+================================================================================
+
+Last Updated: 2025-10-27
+
+INSTRUCTIONS:
+- Review each section below
+- Rewrite any text that sounds AI-generated to match your personal voice
+- Keep quotes from external sources (marked with [KEEP - QUOTED])
+- Mark your revisions clearly so we can update the code
+
+================================================================================
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 1: MAIN LOADING & WELCOME MESSAGES
+File: dist/index.html, src/main.js
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Loading Screen Text (index.html:83):
+   CURRENT: "The stage is being prepared..."
+   YOUR REVISION:
+
+
+Welcome Message - First Visit (main.js:367-370):
+   Title: "Mila."
+   Subtitle: "Some things are built in the quiet."
+   YOUR REVISION:
+
+
+Welcome Message - Returning Visit (main.js:372-375):
+   Title: "You're back."
+   Subtitle: "Good."
+   YOUR REVISION:
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 2: SECURITY GATE (AUTHENTICATION)
+File: src/components/SecurityGate.js
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Gate Title (SecurityGate.js:139):
+   CURRENT: "You are trying to enter T.K.'s heart."
+   YOUR REVISION:
+
+
+Gate Subtitle (SecurityGate.js:143):
+   CURRENT: "Only Mila is allowed in here."
+   YOUR REVISION:
+
+
+First-Time Question Prompt (SecurityGate.js:131):
+   CURRENT: "Prove you are actually the girl of my dreams:"
+   YOUR REVISION:
+
+
+New Device Verification Prompt (SecurityGate.js:133):
+   CURRENT: "This doesnt look like Mila's device, prove to me that you're her:"
+   YOUR REVISION:
+
+
+Returning User Prompt (SecurityGate.js:134):
+   CURRENT: "Prove you are Mila by answering one simple question:"
+   YOUR REVISION:
+
+
+New Device Notice (SecurityGate.js:148):
+   CURRENT: "🔒 New device detected - additional verification required"
+   YOUR REVISION:
+
+
+Welcome Message After Success (SecurityGate.js:248):
+   CURRENT: "Hi, Mila."
+   YOUR REVISION:
+
+
+Troll First Wrong Answer (SecurityGate.js:660):
+   CURRENT: "WHO IS THAT TRIP TRAPPIN' OVER MY BRIDGE?"
+   NOTE: This is a quote from "Three Billy Goats Gruff" fairy tale
+   YOUR REVISION (or mark [KEEP - QUOTED]):
+
+
+Troll Second Wrong Answer (SecurityGate.js:693):
+   CURRENT: "BE GONE FROM HERE!"
+   YOUR REVISION:
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 3: MAIN GALLERY/HUB
+File: src/main.js
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Gallery Title (main.js:662):
+   CURRENT: "Take Your Time"
+   YOUR REVISION:
+
+
+Gallery Subtitle (main.js:663):
+   CURRENT: "Everything here is intentional."
+   YOUR REVISION:
+
+
+Journey Progress Label (main.js:653):
+   CURRENT: "Your Progress"
+   YOUR REVISION:
+
+
+Request-a-Date Button (main.js:644):
+   CURRENT: "Request-a-Date"
+   YOUR REVISION:
+
+
+Daily Message Label (main.js:638):
+   CURRENT: "Today"
+   YOUR REVISION:
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 4: DISCOVERY HINTS (Hidden Experience Tooltips)
+File: src/main.js
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Echo Chamber Discovery Hint (main.js:56):
+   CURRENT: "Not everything worth finding announces itself..."
+   YOUR REVISION:
+
+
+Eternal Garden Discovery Hint (main.js:65):
+   CURRENT: "There is more than meets the eye..."
+   YOUR REVISION:
+
+
+Reflections Discovery Hint (main.js:76):
+   CURRENT: "Some things only appear when you stop looking..."
+   YOUR REVISION:
+
+
+Choreographer Discovery Hint (main.js:85):
+   CURRENT: "Stillness reveals what motion conceals..."
+   YOUR REVISION:
+
+
+Gallery of Us Discovery Hint (main.js:94):
+   CURRENT: "What you seek is already seeking you..."
+   YOUR REVISION:
+
+
+The Dialogue Discovery Hint (main.js:103):
+   CURRENT: "The quietest voices speak the loudest..."
+   YOUR REVISION:
+
+
+Constellation You Discovery Hint (main.js:112):
+   CURRENT: "The stars know your story..."
+   YOUR REVISION:
+
+
+Mirror of Moments Discovery Hint (main.js:121):
+   CURRENT: "Broken things still hold light..."
+   YOUR REVISION:
+
+
+Grace Discovery Hint (main.js:130):
+   CURRENT: "beautiful melodies linger in sacred spaces..."
+   YOUR REVISION:
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 5: EXPERIENCE DESCRIPTIONS (Card Descriptions)
+File: src/main.js
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Echo Chamber Description (main.js:54):
+   CURRENT: "Some rhythms sync without trying"
+   YOUR REVISION:
+
+
+Eternal Garden Description (main.js:63):
+   CURRENT: "What grows between us"
+   YOUR REVISION:
+
+
+Reflections Description (main.js:74):
+   CURRENT: "What you see depends on how you look"
+   YOUR REVISION:
+
+
+Choreographer Description (main.js:83):
+   CURRENT: "Movement speaks louder than words"
+   YOUR REVISION:
+
+
+Gallery of Us Description (main.js:92):
+   CURRENT: "Some art only exists between two people"
+   YOUR REVISION:
+
+
+The Dialogue Description (main.js:101):
+   CURRENT: "The best conversations happen in silence"
+   YOUR REVISION:
+
+
+Constellation You Description (main.js:110):
+   CURRENT: "Separate points that form something whole"
+   YOUR REVISION:
+
+
+Mirror of Moments Description (main.js:119):
+   CURRENT: "Fragments that remember being one"
+   YOUR REVISION:
+
+
+Grace Description (main.js:128):
+   CURRENT: "Mila's favorite"
+   YOUR REVISION:
+
+
+Monuments of Love Description (main.js:137):
+   CURRENT: "A letter written in stone"
+   YOUR REVISION:
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 6: MYSTERY MODE (First-Time Visitor Messages)
+File: src/main.js
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Mystery Mode Main Message (main.js:413):
+   CURRENT: "Not everything worth finding announces itself."
+   YOUR REVISION:
+
+
+Hidden Whisper Phrases (main.js:447-450):
+   1. "Some things are worth the search."
+   2. "The best discoveries happen slowly."
+   3. "Patience reveals what rushing conceals."
+   YOUR REVISIONS:
+   1.
+   2.
+   3.
+
+
+Revelation Message (main.js:541):
+   CURRENT: "There's more here than meets the eye."
+   YOUR REVISION:
+
+
+Discovery Announcement (main.js:1288):
+   CURRENT: "You found:"
+   YOUR REVISION:
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 7: RESET CONFIRMATION
+File: src/main.js
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Reset Confirmation Title (main.js:713):
+   CURRENT: "Start over?"
+   YOUR REVISION:
+
+
+Reset Confirmation Message (main.js:714-718):
+   CURRENT: "This will erase all your progress, completed experiences, and discovered secrets.
+
+             Are you absolutely sure you want to start over?"
+   YOUR REVISION:
+
+
+Reset Confirm Button (main.js:721):
+   CURRENT: "Yes, Reset Everything"
+   YOUR REVISION:
+
+
+Reset Success Message (main.js:760):
+   CURRENT: "Progress reset. Refreshing..."
+   YOUR REVISION:
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 8: VISUAL EXPERIENCE MODE
+File: src/main.js
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Visual Mode Title (main.js:997):
+   CURRENT: "Let's dance"
+   YOUR REVISION:
+
+
+Visual Mode Hint (main.js:999):
+   CURRENT: "Click the ✨ button again to return"
+   YOUR REVISION:
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 9: ECHO CHAMBER PUZZLE
+File: src/puzzles/EchoChamber.js
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Puzzle Title (EchoChamber.js:56):
+   CURRENT: "The Echo Chamber"
+   YOUR REVISION:
+
+
+Puzzle Instruction (EchoChamber.js:57):
+   CURRENT: "Listen carefully, then echo back the rhythm"
+   YOUR REVISION:
+
+
+Round Status (EchoChamber.js:96):
+   CURRENT: "Round 1 of 3"
+   YOUR REVISION:
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 10: REFLECTIONS OF YOU PUZZLE
+File: src/puzzles/ReflectionsOfYou.js
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Puzzle Title (ReflectionsOfYou.js:58):
+   CURRENT: "Reflections of You"
+   YOUR REVISION:
+
+
+Puzzle Instruction (ReflectionsOfYou.js:59):
+   CURRENT: "Move your cursor across the mirror to reveal what's hidden"
+   YOUR REVISION:
+
+
+Poem Fragments (ReflectionsOfYou.js:66-68):
+   CURRENT:
+   - "I saw your reflection
+   - before I saw
+   - your face."
+   YOUR REVISION:
+
+
+Alignment Indicator (ReflectionsOfYou.js:73):
+   CURRENT: "Keep moving..."
+   YOUR REVISION:
+
+
+Clarity Meter Label (ReflectionsOfYou.js:78):
+   CURRENT: "Clarity"
+   YOUR REVISION:
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 11: CHOREOGRAPHER PUZZLE
+File: src/puzzles/Choreographer.js
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Puzzle Description (Comment, Choreographer.js:2-4):
+   CURRENT: "a silhouette of a dancer mirrors her movements
+             She traces poses in the air, and when the dancer matches them, magic happens"
+   NOTE: This is a code comment, not user-facing, but describes the experience
+   YOUR REVISION (optional):
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 12: GALLERY OF US EXPERIENCE
+File: src/puzzles/GalleryOfUs.js
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Description (Comment, GalleryOfUs.js:2-4):
+   CURRENT: "Gallery of Us - A Place for Our Memories
+             Blurred images that fade in to reveal photos of us together
+             Upload feature to add new memories"
+   NOTE: This is a code comment
+   YOUR REVISION (optional):
+
+
+Default Photo Captions (GalleryOfUs.js:42, 48, 54):
+   CURRENT:
+   1. "The beginning of our story..."
+   2. "Our first date together 💕"
+   3. "Making memories from day one ✨"
+   YOUR REVISIONS:
+   1.
+   2.
+   3.
+
+
+Placeholder Message (GalleryOfUs.js:74):
+   CURRENT: "A memory waiting to be captured..."
+   YOUR REVISION:
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 13: THE DIALOGUE PUZZLE
+File: src/puzzles/TheDialogue.js
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Description (Comment, TheDialogue.js:2-4):
+   CURRENT: "A conversation unfolds through poetic choices
+             Each response reveals deeper layers of connection"
+   NOTE: Code comment
+   YOUR REVISION (optional):
+
+
+Exchange 1 Prompt (TheDialogue.js:22):
+   CURRENT: "If silence could speak, what would it say?"
+   YOUR REVISION:
+
+
+Exchange 1 Choice A (TheDialogue.js:25):
+   CURRENT: "It would whisper of moments we didn't need to explain"
+   YOUR REVISION:
+
+
+Exchange 1 Choice B (TheDialogue.js:30):
+   CURRENT: "It would sing of spaces between words that held everything"
+   YOUR REVISION:
+
+
+Exchange 1 Choice C (TheDialogue.js:35):
+   CURRENT: "It would echo with all the things we already knew"
+   YOUR REVISION:
+
+
+Exchange 2 Prompt (TheDialogue.js:42):
+   CURRENT: "What makes a memory worth keeping?"
+   YOUR REVISION:
+
+
+Exchange 2 Choice A (TheDialogue.js:45):
+   CURRENT: "The way it feels like coming home, even in a fleeting moment"
+   YOUR REVISION:
+
+
+Exchange 2 Choice B (TheDialogue.js:50):
+   CURRENT: "How it changes you, quietly, without announcement"
+   YOUR REVISION:
+
+
+Exchange 2 Choice C (TheDialogue.js:55):
+   CURRENT: "The truth that lives in it, unchanged by time"
+   YOUR REVISION:
+
+
+Exchange 3 Prompt (TheDialogue.js:62):
+   CURRENT: "If you could gift someone a feeling, which would you choose?"
+   YOUR REVISION:
+
+
+Exchange 3 Choice A (TheDialogue.js:65):
+   CURRENT: "The certainty of being seen, completely and without pretense"
+   YOUR REVISION:
+
+
+Exchange 3 Choice B (TheDialogue.js:70):
+   CURRENT: "The warmth of knowing you're thought of, even from afar"
+   YOUR REVISION:
+
+
+Exchange 3 Choice C (TheDialogue.js:75):
+   CURRENT: "The peace of being exactly who you are, with no apology needed"
+   YOUR REVISION:
+
+
+Exchange 4 Prompt (TheDialogue.js:82):
+   CURRENT: "What does connection feel like to you?"
+   YOUR REVISION:
+
+
+Exchange 4 Choice A (TheDialogue.js:85):
+   CURRENT: "Like finding a rhythm you didn't know you'd been searching for"
+   YOUR REVISION:
+
+
+Exchange 4 Choice B (TheDialogue.js:90):
+   CURRENT: "Like recognizing something familiar in someone entirely new"
+   YOUR REVISION:
+
+
+Exchange 4 Choice C (TheDialogue.js:95):
+   CURRENT: "Like the quiet certainty that some things just make sense"
+   YOUR REVISION:
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 14: CONSTELLATION YOU PUZZLE
+File: src/puzzles/ConstellationYou.js
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Puzzle Title (ConstellationYou.js:80):
+   CURRENT: "Constellation You"
+   YOUR REVISION:
+
+
+Puzzle Subtitle (ConstellationYou.js:81):
+   CURRENT: "Click the bright stars one by one to connect them"
+   YOUR REVISION:
+
+
+Puzzle Hint (ConstellationYou.js:82):
+   CURRENT: "Find 3 patterns hidden in the sky"
+   YOUR REVISION:
+
+
+Progress Text (ConstellationYou.js:90):
+   CURRENT: "0 of 3 constellations discovered"
+   YOUR REVISION:
+
+
+Clear Button (ConstellationYou.js:93):
+   CURRENT: "Clear Selection"
+   YOUR REVISION:
+
+
+Bottom Hint (ConstellationYou.js:97):
+   CURRENT: "Click stars to connect them... what patterns do you see?"
+   YOUR REVISION:
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 15: MIRROR OF MOMENTS PUZZLE
+File: src/puzzles/MirrorOfMoments.js
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Puzzle Title (MirrorOfMoments.js:70):
+   CURRENT: "Mirror of Moments"
+   YOUR REVISION:
+
+
+Puzzle Subtitle (MirrorOfMoments.js:71):
+   CURRENT: "Bring the fragments together to see what they've always shown"
+   YOUR REVISION:
+
+
+Progress Text (MirrorOfMoments.js:79):
+   CURRENT: "0 of 9 pieces united"
+   YOUR REVISION:
+
+
+Hint (MirrorOfMoments.js:84):
+   CURRENT: "Drag pieces close together... they'll find their way home"
+   YOUR REVISION:
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 16: ETERNAL GARDEN PUZZLE
+File: src/puzzles/EternalGarden.js
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Puzzle Title (EternalGarden.js:73):
+   CURRENT: "Eternal Garden"
+   YOUR REVISION:
+
+
+Puzzle Subtitle (EternalGarden.js:74):
+   CURRENT: "Plant seeds with your presence, watch them grow into something lasting"
+   YOUR REVISION:
+
+
+Progress Text (EternalGarden.js:82):
+   CURRENT: "0 of 12 flowers blooming"
+   YOUR REVISION:
+
+
+Hint (EternalGarden.js:87):
+   CURRENT: "Click to plant seeds... watch them grow"
+   YOUR REVISION:
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 17: GRACE EXPERIENCE
+File: src/puzzles/Grace.js
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Title (Grace.js:45):
+   CURRENT: "Grace"
+   NOTE: This is the album title
+   YOUR REVISION (or mark [KEEP - QUOTED]):
+
+
+Artist (Grace.js:46):
+   CURRENT: "Jeff Buckley"
+   NOTE: Artist name
+   YOUR REVISION (or mark [KEEP - QUOTED]):
+
+
+Message (Grace.js:48):
+   CURRENT: "There's a light in you that shines through everything"
+   YOUR REVISION:
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 18: MONUMENTS OF LOVE FINALE
+File: src/puzzles/MonumentsOfLove.js
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Intro Slide Title (MonumentsOfLove.js:17):
+   CURRENT: "A Letter Written in Stone"
+   YOUR REVISION:
+
+
+Intro Slide Subtitle (MonumentsOfLove.js:18):
+   CURRENT: "Throughout history, love has built monuments..."
+   YOUR REVISION:
+
+
+Outro Slide Title (MonumentsOfLove.js:79):
+   CURRENT: "And Now..."
+   YOUR REVISION:
+
+
+Outro Slide Subtitle (MonumentsOfLove.js:80):
+   CURRENT: "A monument just for you"
+   YOUR REVISION:
+
+
+NOTE: Monument stories (lines 22-77) are [KEEP - HISTORICAL FACTS]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 19: TEST PAGE
+File: public/test.html
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Page Title (test.html:153):
+   CURRENT: "🧪 Test Page"
+   YOUR REVISION:
+
+
+Page Subtitle (test.html:154):
+   CURRENT: "Test each experience individually - click any card below"
+   YOUR REVISION:
+
+
+Info Box Title (test.html:157):
+   CURRENT: "How to Test"
+   YOUR REVISION:
+
+
+Info Box Message (test.html:158):
+   CURRENT: "Click an experience card → Complete the puzzle → Automatically returns here"
+   YOUR REVISION:
+
+
+Clear Progress Button (test.html:224):
+   CURRENT: "🗑️ Clear All Progress"
+   YOUR REVISION:
+
+
+Show Storage Button (test.html:225):
+   CURRENT: "📊 Show Storage"
+   YOUR REVISION:
+
+
+Unlock All Button (test.html:226):
+   CURRENT: "🔓 Unlock All Experiences"
+   YOUR REVISION:
+
+
+Go to Main Button (test.html:227):
+   CURRENT: "🏠 Go to Main Site"
+   YOUR REVISION:
+
+
+Clear Confirmation (test.html:244):
+   CURRENT: "Progress cleared! Reload to start fresh."
+   YOUR REVISION:
+
+
+Show Storage Alert (test.html:255):
+   CURRENT: "Check console for storage data (F12)"
+   YOUR REVISION:
+
+
+Unlock All Confirmation (test.html:273):
+   CURRENT: "All experiences unlocked! Go to main site to see them all."
+   YOUR REVISION:
+
+
+Test Complete Message (test.html:280):
+   CURRENT: "✓ Test completed!"
+   YOUR REVISION:
+
+
+================================================================================
+
+END OF COPYWRITING AUDIT
+
+NEXT STEPS:
+1. Review each section above
+2. Rewrite text in your personal voice
+3. Mark any quoted text you want to keep with [KEEP - QUOTED]
+4. Save this file with your revisions
+5. Let me know when ready and I'll update all the code files
+
+================================================================================

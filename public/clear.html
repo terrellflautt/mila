@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Clear Test Data</title>
+  <style>
+    body {
+      font-family: 'Courier New', monospace;
+      background: #0a0a0a;
+      color: #FFB6C1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+      text-align: center;
+    }
+    .container {
+      max-width: 600px;
+      padding: 2rem;
+    }
+    button {
+      background: #FFB6C1;
+      color: #0a0a0a;
+      border: none;
+      padding: 1rem 2rem;
+      font-size: 1.2rem;
+      cursor: pointer;
+      border-radius: 8px;
+      margin: 1rem;
+      font-family: 'Courier New', monospace;
+      font-weight: bold;
+    }
+    button:hover {
+      background: #FF69B4;
+    }
+    .success {
+      color: #88ee88;
+      font-size: 1.5rem;
+      margin-top: 2rem;
+      display: none;
+    }
+    .warning {
+      color: #ff6b6b;
+      margin-bottom: 2rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🧹 Clear Testing Data</h1>
+    <p class="warning">
+      ⚠️ This will delete ALL progress, completed puzzles, and authentication data.<br>
+      Use this before sending to Mila so she gets a fresh experience!
+    </p>
+
+    <button onclick="clearData()">Clear All Data</button>
+
+    <div class="success" id="success">
+      ✅ All testing data cleared!<br>
+      You can close this page now.
+    </div>
+  </div>
+
+  <script>
+    function clearData() {
+      // Clear ALL localStorage
+      localStorage.clear();
+
+      // Clear session storage too
+      sessionStorage.clear();
+
+      // Clear cookies
+      document.cookie.split(";").forEach(function(c) {
+        document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+      });
+
+      // Show success message
+      document.getElementById('success').style.display = 'block';
+
+      console.log('✅ All data cleared successfully!');
+      console.log('localStorage:', localStorage.length, 'items');
+      console.log('sessionStorage:', sessionStorage.length, 'items');
+    }
+  </script>
+</body>
+</html>

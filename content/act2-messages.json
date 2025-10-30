@@ -1,0 +1,190 @@
+{
+  "act2": {
+    "theme": "The Becoming - Connection, Recognition, and Rhythm",
+    "visualMood": "Indigos, crimsons, violet darkness, golden light trails",
+    "dailyMessages": [
+      {
+        "short": "Breathe",
+        "long": "You don't have to rush. The music waits for you."
+      },
+      {
+        "short": "Grace",
+        "long": "Some days, grace looks like just showing up."
+      },
+      {
+        "short": "Dance",
+        "long": "It's not about the steps. It's about who you're dancing with."
+      },
+      {
+        "short": "Rhythm",
+        "long": "We move through the same quiet rhythm, even when silence keeps the beat."
+      },
+      {
+        "short": "Color",
+        "long": "Your presence changes the temperature of every room."
+      },
+      {
+        "short": "Harmony",
+        "long": "When you speak, the world adjusts its frequency."
+      }
+    ],
+    "poemLines": [
+      "We move through the same quiet rhythm, even when silence keeps the beat.",
+      "Each memory paints its own portrait, and somehow, your color fills them all.",
+      "Words became choreography—and meaning danced between us."
+    ],
+    "dialoguePrompts": [
+      {
+        "id": "dialogue-1",
+        "text": "Do you believe in coincidences or choreography?",
+        "options": [
+          {
+            "text": "Coincidences—life is beautifully random",
+            "hue": 180,
+            "chord": "C major"
+          },
+          {
+            "text": "Choreography—nothing happens by accident",
+            "hue": 320,
+            "chord": "A minor"
+          },
+          {
+            "text": "Both—patterns within chaos",
+            "hue": 280,
+            "chord": "F major"
+          }
+        ]
+      },
+      {
+        "id": "dialogue-2",
+        "text": "When do you feel most like yourself?",
+        "options": [
+          {
+            "text": "When I'm creating something",
+            "hue": 45,
+            "chord": "D major"
+          },
+          {
+            "text": "When I'm with people I trust",
+            "hue": 200,
+            "chord": "E minor"
+          },
+          {
+            "text": "When I'm completely alone",
+            "hue": 270,
+            "chord": "G minor"
+          }
+        ]
+      },
+      {
+        "id": "dialogue-3",
+        "text": "What matters more: the destination or the journey?",
+        "options": [
+          {
+            "text": "The destination—purpose drives me",
+            "hue": 0,
+            "chord": "C major"
+          },
+          {
+            "text": "The journey—process is everything",
+            "hue": 140,
+            "chord": "A major"
+          },
+          {
+            "text": "They're inseparable",
+            "hue": 300,
+            "chord": "E major"
+          }
+        ]
+      },
+      {
+        "id": "dialogue-4",
+        "text": "How do you know when something is true?",
+        "options": [
+          {
+            "text": "It resonates in my chest",
+            "hue": 340,
+            "chord": "D minor"
+          },
+          {
+            "text": "It makes sense in my mind",
+            "hue": 210,
+            "chord": "B minor"
+          },
+          {
+            "text": "Time reveals it",
+            "hue": 60,
+            "chord": "F major"
+          }
+        ]
+      },
+      {
+        "id": "dialogue-5",
+        "text": "What's the bravest thing you've done lately?",
+        "options": [
+          {
+            "text": "Trusted someone new",
+            "hue": 330,
+            "chord": "A minor"
+          },
+          {
+            "text": "Said no to something easy",
+            "hue": 240,
+            "chord": "E minor"
+          },
+          {
+            "text": "Started something I might fail at",
+            "hue": 30,
+            "chord": "G major"
+          },
+          {
+            "text": "Ask me in person",
+            "hue": 280,
+            "chord": "C major"
+          }
+        ]
+      }
+    ],
+    "questions": [
+      {
+        "id": "act2-q1",
+        "puzzle": "choreographer",
+        "text": "What's a movement or gesture that feels completely yours?",
+        "options": [
+          "The way I walk",
+          "How I use my hands when I talk",
+          "My laugh",
+          "The way I dance when no one's watching",
+          "Write my own",
+          "Ask me in person"
+        ],
+        "yourAnswer": "The way I pause before I speak when something matters"
+      },
+      {
+        "id": "act2-q2",
+        "puzzle": "gallery",
+        "text": "If your life were a painting, what would dominate the canvas?",
+        "options": [
+          "Bold colors and motion",
+          "Quiet details and texture",
+          "Light breaking through darkness",
+          "Figures in conversation",
+          "Write my own",
+          "Ask me in person"
+        ],
+        "yourAnswer": "The space between moments—where everything changes"
+      },
+      {
+        "id": "act2-q3",
+        "puzzle": "dialogue",
+        "text": "What's a question you wish someone would ask you?",
+        "options": [
+          "Write my own",
+          "Ask me in person",
+          "None of your business 😉"
+        ],
+        "yourAnswer": "What are you building toward, and why does it scare you?"
+      }
+    ]
+  }
+}

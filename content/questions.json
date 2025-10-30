@@ -1,0 +1,212 @@
+{
+  "questions": [
+    {
+      "id": "q1",
+      "phase": "light",
+      "day": 1,
+      "text": "Favorite way to spend a Saturday?",
+      "options": [
+        "Coffee & a good book",
+        "Out with friends",
+        "Walk in a park",
+        "Creating something",
+        "Write my own",
+        "Ask me in person",
+        "None of your business"
+      ],
+      "yourAnswer": "Creating something meaningful, usually with music in the background"
+    },
+    {
+      "id": "q2",
+      "phase": "light",
+      "day": 2,
+      "text": "Coffee or tea?",
+      "options": ["Coffee", "Tea", "Both", "Neither", "Write my own", "Ask me in person"],
+      "yourAnswer": "Coffee, but I'll try any tea you recommend"
+    },
+    {
+      "id": "q3",
+      "phase": "light",
+      "day": 3,
+      "text": "Morning person or night owl?",
+      "options": ["Morning person", "Night owl", "Somewhere in between", "Write my own", "Ask me in person"],
+      "yourAnswer": "Night owl trying to become a morning person"
+    },
+    {
+      "id": "q4",
+      "phase": "light",
+      "day": 4,
+      "text": "A color that makes you feel at home?",
+      "options": ["Pink", "Blue", "Green", "Black", "Beige", "Write my own", "Ask me in person"],
+      "yourAnswer": "Warm beige, like morning light through curtains"
+    },
+    {
+      "id": "q5",
+      "phase": "light",
+      "day": 5,
+      "text": "Right now, pick one: theater, ballet, or poetry?",
+      "options": ["Theater", "Ballet", "Poetry", "Can't choose", "Write my own", "Ask me in person"],
+      "yourAnswer": "I love how they're all performances of the human heart"
+    },
+    {
+      "id": "q6",
+      "phase": "light",
+      "day": 6,
+      "text": "Best snack during a long rehearsal?",
+      "options": ["Something sweet", "Something salty", "Fruit", "Nothing, just water", "Write my own", "Ask me in person"],
+      "yourAnswer": "Dark chocolate, the kind that makes you pause"
+    },
+    {
+      "id": "q7",
+      "phase": "light",
+      "day": 7,
+      "text": "Quiet nights in or lively nights out?",
+      "options": ["Quiet nights in", "Lively nights out", "Depends on my mood", "Write my own", "Ask me in person"],
+      "yourAnswer": "Quiet nights with the right person > loud nights with everyone"
+    },
+    {
+      "id": "q8",
+      "phase": "light",
+      "day": 8,
+      "text": "Favorite season?",
+      "options": ["Spring", "Summer", "Fall", "Winter", "Write my own", "Ask me in person"],
+      "yourAnswer": "Fall—everything feels like it's preparing for something beautiful"
+    },
+    {
+      "id": "q9",
+      "phase": "light",
+      "day": 9,
+      "text": "Would you rather watch a play or dance performance?",
+      "options": ["Play", "Dance performance", "Both are perfect", "Write my own", "Ask me in person"],
+      "yourAnswer": "Dance—stories told without words hit different"
+    },
+    {
+      "id": "q10",
+      "phase": "light",
+      "day": 10,
+      "text": "How do you celebrate a small win?",
+      "options": ["Tell someone", "Keep it private", "Treat myself", "Don't really celebrate", "Write my own", "Ask me in person"],
+      "yourAnswer": "I do a little dance when no one's watching"
+    },
+    {
+      "id": "q11",
+      "phase": "mid",
+      "day": 11,
+      "text": "What quality do you value most in someone close to you?",
+      "options": ["Honesty", "Loyalty", "Humor", "Bravery", "Kindness", "Write my own", "Ask me in person"],
+      "yourAnswer": "Honesty wrapped in kindness"
+    },
+    {
+      "id": "q12",
+      "phase": "mid",
+      "day": 12,
+      "text": "Planned trip or spontaneous adventure?",
+      "options": ["Planned trip", "Spontaneous adventure", "A little of both", "Write my own", "Ask me in person"],
+      "yourAnswer": "Planned framework with room for spontaneous magic"
+    },
+    {
+      "id": "q13",
+      "phase": "mid",
+      "day": 13,
+      "text": "When you're worried, what helps most?",
+      "options": ["Talking it out", "Music", "Alone time", "Movement", "Write my own", "Ask me in person"],
+      "yourAnswer": "Creating something—it quiets the noise"
+    },
+    {
+      "id": "q14",
+      "phase": "mid",
+      "day": 14,
+      "text": "Ultimate comfort food?",
+      "options": ["Something warm", "Something sweet", "Home cooking", "Write my own", "Ask me in person"],
+      "yourAnswer": "My mom's cooking, but I'll never get the recipe right"
+    },
+    {
+      "id": "q15",
+      "phase": "mid",
+      "day": 15,
+      "text": "A poet or writer who changed how you see things?",
+      "options": ["Write my own", "Ask me in person", "None of your business"],
+      "yourAnswer": "Maya Angelou taught me that tenderness is strength"
+    },
+    {
+      "id": "q16",
+      "phase": "mid",
+      "day": 16,
+      "text": "How do you like to be encouraged when trying something new?",
+      "options": ["Words of affirmation", "Quiet support", "Practical help", "Space to figure it out", "Write my own", "Ask me in person"],
+      "yourAnswer": "Quiet presence—knowing someone believes in me is enough"
+    },
+    {
+      "id": "q17",
+      "phase": "mid",
+      "day": 17,
+      "text": "Do you like surprises?",
+      "options": ["Yes!", "No thanks", "Only small ones", "Depends who it's from", "Write my own", "Ask me in person"],
+      "yourAnswer": "Small, thoughtful ones that show you were listening"
+    },
+    {
+      "id": "q18",
+      "phase": "mid",
+      "day": 18,
+      "text": "What's one small kindness that makes your day?",
+      "options": ["A genuine compliment", "Someone remembering details", "Unexpected help", "Quality time", "Write my own", "Ask me in person"],
+      "yourAnswer": "When someone notices I'm trying"
+    },
+    {
+      "id": "q19",
+      "phase": "deep",
+      "day": 19,
+      "text": "A memory that makes you feel most like yourself?",
+      "options": ["Write my own", "Ask me in person", "None of your business"],
+      "yourAnswer": "The first time I built something that made someone smile"
+    },
+    {
+      "id": "q20",
+      "phase": "deep",
+      "day": 20,
+      "text": "A fear you quietly manage?",
+      "options": ["Not being enough", "Being forgotten", "Missing out", "Not trying hard enough", "Write my own", "Ask me in person", "None of your business"],
+      "yourAnswer": "That I'll miss the moment that matters most"
+    },
+    {
+      "id": "q21",
+      "phase": "deep",
+      "day": 21,
+      "text": "What's one thing you hope people notice about you?",
+      "options": ["My effort", "My creativity", "My care for others", "My authenticity", "Write my own", "Ask me in person"],
+      "yourAnswer": "That I pay attention to the small things"
+    },
+    {
+      "id": "q22",
+      "phase": "deep",
+      "day": 22,
+      "text": "A dream you haven't shared much?",
+      "options": ["Write my own", "Ask me in person", "None of your business"],
+      "yourAnswer": "To build beautiful things that make people feel less alone"
+    },
+    {
+      "id": "q23",
+      "phase": "deep",
+      "day": 23,
+      "text": "What does trust feel like to you?",
+      "options": ["Safety", "Freedom", "Being fully known", "Consistency", "Write my own", "Ask me in person"],
+      "yourAnswer": "Being able to be quiet together and it doesn't feel empty"
+    },
+    {
+      "id": "q24",
+      "phase": "deep",
+      "day": 24,
+      "text": "If you could make one rule everyone followed, what would it be?",
+      "options": ["Be kind", "Be honest", "Be curious", "Be brave", "Write my own", "Ask me in person"],
+      "yourAnswer": "Notice the people trying their best"
+    },
+    {
+      "id": "q25",
+      "phase": "deep",
+      "day": 25,
+      "text": "Best piece of advice you've ever received?",
+      "options": ["Write my own", "Ask me in person", "None of your business"],
+      "yourAnswer": "Do it afraid—courage isn't the absence of fear"
+    }
+  ]
+}

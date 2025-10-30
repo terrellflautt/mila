@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mila's World - Test Page</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #0a0a0a 0%, #1a0a1a 100%);
+      color: #FFF8F0;
+      min-height: 100vh;
+      padding: 2rem;
+    }
+
+    .test-container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 3rem;
+      text-align: center;
+      margin-bottom: 1rem;
+      color: #FFB6C1;
+    }
+
+    .subtitle {
+      text-align: center;
+      font-size: 1rem;
+      color: #FFE4E1;
+      margin-bottom: 3rem;
+    }
+
+    .experience-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.5rem;
+      margin-bottom: 3rem;
+    }
+
+    .test-card {
+      background: rgba(0, 0, 0, 0.4);
+      backdrop-filter: blur(15px);
+      border: 2px solid rgba(255, 182, 193, 0.3);
+      border-radius: 16px;
+      padding: 2rem;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .test-card:hover {
+      transform: translateY(-8px);
+      border-color: #FFB6C1;
+      box-shadow: 0 12px 40px rgba(255, 182, 193, 0.3);
+    }
+
+    .test-icon {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+    }
+
+    .test-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.5rem;
+      margin-bottom: 0.5rem;
+      color: #FFF8F0;
+    }
+
+    .test-desc {
+      font-size: 0.9rem;
+      color: rgba(255, 255, 255, 0.7);
+      line-height: 1.5;
+    }
+
+    .utilities {
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .util-btn {
+      padding: 0.75rem 1.5rem;
+      background: rgba(255, 182, 193, 0.2);
+      border: 2px solid rgba(255, 182, 193, 0.4);
+      border-radius: 8px;
+      color: #FFE4E1;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .util-btn:hover {
+      background: rgba(255, 182, 193, 0.3);
+      border-color: #FFB6C1;
+    }
+
+    #app {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 1;
+    }
+  </style>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600;700&family=Montserrat:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div id="app"></div>
+
+  <div class="test-container">
+    <h1>🧪 Test Page</h1>
+    <p class="subtitle">Test each experience individually - no security gate needed</p>
+
+    <div class="experience-grid">
+      <div class="test-card" data-experience="EchoChamber">
+        <div class="test-icon">🎵</div>
+        <div class="test-title">Echo Chamber</div>
+        <div class="test-desc">Listen to the rhythm of connection</div>
+      </div>
+
+      <div class="test-card" data-experience="ReflectionsOfYou">
+        <div class="test-icon">🪞</div>
+        <div class="test-title">Reflections</div>
+        <div class="test-desc">See yourself through another's eyes</div>
+      </div>
+
+      <div class="test-card" data-experience="Choreographer">
+        <div class="test-icon">💫</div>
+        <div class="test-title">Choreographer</div>
+        <div class="test-desc">Dance with light and memory</div>
+      </div>
+
+      <div class="test-card" data-experience="GalleryOfUs">
+        <div class="test-icon">🎨</div>
+        <div class="test-title">Gallery of Us</div>
+        <div class="test-desc">Living art that reacts to your presence</div>
+      </div>
+
+      <div class="test-card" data-experience="TheDialogue">
+        <div class="test-icon">💭</div>
+        <div class="test-title">The Dialogue</div>
+        <div class="test-desc">A conversation in poetry</div>
+      </div>
+
+      <div class="test-card" data-experience="ConstellationYou">
+        <div class="test-icon">⭐</div>
+        <div class="test-title">Constellation You</div>
+        <div class="test-desc">Connect the stars, find the patterns</div>
+      </div>
+
+      <div class="test-card" data-experience="MirrorOfMoments">
+        <div class="test-icon">💎</div>
+        <div class="test-title">Mirror of Moments</div>
+        <div class="test-desc">Bring scattered pieces into wholeness</div>
+      </div>
+
+      <div class="test-card" data-experience="EternalGarden">
+        <div class="test-icon">🌸</div>
+        <div class="test-title">Eternal Garden</div>
+        <div class="test-desc">Plant seeds that bloom forever</div>
+      </div>
+
+      <div class="test-card" data-experience="Grace">
+        <div class="test-icon">🎸</div>
+        <div class="test-title">Grace</div>
+        <div class="test-desc">Her favorite album, her favorite artist</div>
+      </div>
+
+      <div class="test-card" data-experience="MonumentsOfLove">
+        <div class="test-icon">🏛️</div>
+        <div class="test-title">Monuments of Love</div>
+        <div class="test-desc">A letter written in stone</div>
+      </div>
+    </div>
+
+    <div class="utilities">
+      <button class="util-btn" onclick="clearStorage()">🗑️ Clear All Progress</button>
+      <button class="util-btn" onclick="showStorage()">📊 Show Storage</button>
+      <button class="util-btn" onclick="location.href='/'">🏠 Go to Main Site</button>
+    </div>
+  </div>
+
+  <script type="module">
+    import { EchoChamber } from './src/puzzles/EchoChamber.js';
+    import { ReflectionsOfYou } from './src/puzzles/ReflectionsOfYou.js';
+    import { Choreographer } from './src/puzzles/Choreographer.js';
+    import { GalleryOfUs } from './src/puzzles/GalleryOfUs.js';
+    import { TheDialogue } from './src/puzzles/TheDialogue.js';
+    import { ConstellationYou } from './src/puzzles/ConstellationYou.js';
+    import { MirrorOfMoments } from './src/puzzles/MirrorOfMoments.js';
+    import { EternalGarden } from './src/puzzles/EternalGarden.js';
+    import { Grace } from './src/puzzles/Grace.js';
+    import { MonumentsOfLove } from './src/puzzles/MonumentsOfLove.js';
+
+    const puzzles = {
+      EchoChamber,
+      ReflectionsOfYou,
+      Choreographer,
+      GalleryOfUs,
+      TheDialogue,
+      ConstellationYou,
+      MirrorOfMoments,
+      EternalGarden,
+      Grace,
+      MonumentsOfLove
+    };
+
+    let currentPuzzle = null;
+
+    // Setup card clicks
+    document.querySelectorAll('.test-card').forEach(card => {
+      card.addEventListener('click', () => {
+        if (currentPuzzle) {
+          console.log('⚠️ Please complete or close the current puzzle first');
+          return;
+        }
+
+        const experienceName = card.dataset.experience;
+        const PuzzleClass = puzzles[experienceName];
+
+        if (!PuzzleClass) {
+          console.error('Puzzle not found:', experienceName);
+          return;
+        }
+
+        console.log('🚀 Starting:', experienceName);
+        currentPuzzle = new PuzzleClass(() => {
+          console.log('✅ Completed:', experienceName);
+          currentPuzzle = null;
+        });
+        currentPuzzle.show();
+      });
+    });
+
+    // Utility functions
+    window.clearStorage = () => {
+      const keys = Object.keys(localStorage);
+      const milasKeys = keys.filter(k => k.startsWith('milas-world'));
+      milasKeys.forEach(k => localStorage.removeItem(k));
+      console.log('🗑️ Cleared', milasKeys.length, 'items');
+      alert('Progress cleared! Reload to start fresh.');
+    };
+
+    window.showStorage = () => {
+      const keys = Object.keys(localStorage);
+      const milasKeys = keys.filter(k => k.startsWith('milas-world'));
+      console.log('📊 Storage:');
+      milasKeys.forEach(k => {
+        console.log(`  ${k}:`, localStorage.getItem(k));
+      });
+      alert('Check console for storage data');
+    };
+  </script>
+</body>
+</html>

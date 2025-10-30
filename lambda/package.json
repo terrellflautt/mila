@@ -1,0 +1,15 @@
+{
+  "name": "milas-world-lambda",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Lambda functions for Mila's World",
+  "main": "answer-handler.js",
+  "scripts": {
+    "build": "npm install",
+    "package": "zip -r function.zip ."
+  },
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.490.0",
+    "@aws-sdk/lib-dynamodb": "^3.490.0"
+  }
+}

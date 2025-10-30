@@ -1,0 +1,18 @@
+I want to add a request date button for her to be able to click whenever she wants to see me
+it should fade in a beautiful contact form that says something like
+Request-a-date
+it will have optional input for
+
+When?
+
+Date (calendar drop down for her to select day/month)
+
+1. ASAP
+
+2. idk, just figure it out before i change my mind
+
+Time (optional time)
+Place (optional place)
+
+
+it will send the date request to terrell.flautt@gmail.com

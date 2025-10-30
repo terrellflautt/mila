@@ -1,0 +1,252 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Mila''s World - CloudFront Deployment (No Custom Domain Required)'
+
+Parameters:
+  Web3FormsAccessKey:
+    Type: String
+    Default: 'eafc242f-6c42-4d16-9253-28c7b6969aa7'
+    NoEcho: true
+    Description: 'Web3Forms access key'
+
+  EmailTo:
+    Type: String
+    Default: 'terrell.flautt@gmail.com'
+    Description: 'Email address for notifications'
+
+Resources:
+  # ==========================================
+  # S3 BUCKET - COMPLETELY PRIVATE
+  # ==========================================
+  PrivateContentBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub 'milas-world-content-${AWS::AccountId}'
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      VersioningConfiguration:
+        Status: Enabled
+      Tags:
+        - Key: Project
+          Value: MilasWorld
+        - Key: Security
+          Value: Private
+
+  # S3 Bucket Policy - ONLY CloudFront OAI can access
+  PrivateContentBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref PrivateContentBucket
+      PolicyDocument:
+        Statement:
+          - Sid: AllowCloudFrontOAI
+            Effect: Allow
+            Principal:
+              CanonicalUser: !GetAtt CloudFrontOAI.S3CanonicalUserId
+            Action: 's3:GetObject'
+            Resource: !Sub '${PrivateContentBucket.Arn}/*'
+          - Sid: DenyInsecureTransport
+            Effect: Deny
+            Principal: '*'
+            Action: 's3:*'
+            Resource:
+              - !GetAtt PrivateContentBucket.Arn
+              - !Sub '${PrivateContentBucket.Arn}/*'
+            Condition:
+              Bool:
+                'aws:SecureTransport': false
+
+  # CloudFront Origin Access Identity
+  CloudFrontOAI:
+    Type: AWS::CloudFront::CloudFrontOriginAccessIdentity
+    Properties:
+      CloudFrontOriginAccessIdentityConfig:
+        Comment: 'OAI for Mila''s World'
+
+  # ==========================================
+  # DYNAMODB TABLE - ENCRYPTED
+  # ==========================================
+  AnswersTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: 'milas-world-answers'
+      BillingMode: PAY_PER_REQUEST
+      SSESpecification:
+        SSEEnabled: true
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      AttributeDefinitions:
+        - AttributeName: 'visitorId'
+          AttributeType: 'S'
+        - AttributeName: 'timestamp'
+          AttributeType: 'S'
+      KeySchema:
+        - AttributeName: 'visitorId'
+          KeyType: 'HASH'
+        - AttributeName: 'timestamp'
+          KeyType: 'RANGE'
+      Tags:
+        - Key: Project
+          Value: MilasWorld
+
+  # ==========================================
+  # LAMBDA EXECUTION ROLE
+  # ==========================================
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole'
+      Policies:
+        - PolicyName: DynamoDBAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'dynamodb:PutItem'
+                  - 'dynamodb:GetItem'
+                  - 'dynamodb:Query'
+                Resource: !GetAtt AnswersTable.Arn
+
+  # ==========================================
+  # LAMBDA LAYER WITH AWS SDK V3
+  # ==========================================
+  AwsSdkLayer:
+    Type: AWS::Lambda::LayerVersion
+    Properties:
+      LayerName: aws-sdk-v3-dynamodb
+      Description: AWS SDK v3 for DynamoDB
+      Content:
+        S3Bucket: !Ref LambdaCodeBucket
+        S3Key: layers/aws-sdk-layer.zip
+      CompatibleRuntimes:
+        - nodejs18.x
+
+  # Temporary bucket for Lambda code
+  LambdaCodeBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub 'milas-world-lambda-${AWS::AccountId}'
+
+  # ==========================================
+  # API GATEWAY
+  # ==========================================
+  ApiGateway:
+    Type: AWS::ApiGatewayV2::Api
+    Properties:
+      Name: 'milas-world-api'
+      ProtocolType: HTTP
+      CorsConfiguration:
+        AllowOrigins:
+          - '*'
+        AllowMethods:
+          - GET
+          - POST
+          - OPTIONS
+        AllowHeaders:
+          - Content-Type
+          - X-Amz-Date
+          - Authorization
+          - X-Api-Key
+        MaxAge: 300
+
+  ApiStage:
+    Type: AWS::ApiGatewayV2::Stage
+    Properties:
+      ApiId: !Ref ApiGateway
+      StageName: prod
+      AutoDeploy: true
+
+  # ==========================================
+  # CLOUDFRONT DISTRIBUTION - HTTPS ONLY
+  # ==========================================
+  CloudFrontDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Enabled: true
+        HttpVersion: http2and3
+        PriceClass: PriceClass_100
+        Comment: 'Private distribution for Mila''s World'
+        ViewerCertificate:
+          CloudFrontDefaultCertificate: true
+          MinimumProtocolVersion: TLSv1.2_2021
+        DefaultRootObject: index.html
+        Origins:
+          - Id: S3Origin
+            DomainName: !GetAtt PrivateContentBucket.RegionalDomainName
+            S3OriginConfig:
+              OriginAccessIdentity: !Sub 'origin-access-identity/cloudfront/${CloudFrontOAI}'
+        DefaultCacheBehavior:
+          TargetOriginId: S3Origin
+          ViewerProtocolPolicy: redirect-to-https
+          AllowedMethods:
+            - GET
+            - HEAD
+            - OPTIONS
+          CachedMethods:
+            - GET
+            - HEAD
+          Compress: true
+          CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6  # CachingOptimized
+          OriginRequestPolicyId: 88a5eaf4-2fd4-4709-b370-b4c650ea3fcf  # CORS-S3Origin
+        CustomErrorResponses:
+          - ErrorCode: 403
+            ResponseCode: 200
+            ResponsePagePath: /index.html
+            ErrorCachingMinTTL: 10
+          - ErrorCode: 404
+            ResponseCode: 200
+            ResponsePagePath: /index.html
+            ErrorCachingMinTTL: 10
+
+Outputs:
+  BucketName:
+    Description: 'S3 bucket name for uploading content'
+    Value: !Ref PrivateContentBucket
+    Export:
+      Name: !Sub '${AWS::StackName}-BucketName'
+
+  CloudFrontDistributionId:
+    Description: 'CloudFront distribution ID for cache invalidation'
+    Value: !Ref CloudFrontDistribution
+    Export:
+      Name: !Sub '${AWS::StackName}-DistributionId'
+
+  CloudFrontDomain:
+    Description: 'CloudFront distribution domain'
+    Value: !GetAtt CloudFrontDistribution.DomainName
+    Export:
+      Name: !Sub '${AWS::StackName}-CloudFrontDomain'
+
+  SiteURL:
+    Description: 'Live Website URL (HTTPS only)'
+    Value: !Sub 'https://${CloudFrontDistribution.DomainName}'
+
+  ApiEndpoint:
+    Description: 'API Gateway endpoint'
+    Value: !Sub 'https://${ApiGateway}.execute-api.${AWS::Region}.amazonaws.com/prod'
+    Export:
+      Name: !Sub '${AWS::StackName}-ApiEndpoint'
+
+  DynamoDBTableName:
+    Description: 'DynamoDB table name'
+    Value: !Ref AnswersTable
+
+  SecurityNote:
+    Description: 'Security configuration'
+    Value: 'S3 bucket is PRIVATE - CloudFront OAI only. DynamoDB encrypted. HTTPS enforced. Flamingo password required.'

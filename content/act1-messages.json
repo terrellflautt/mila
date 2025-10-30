@@ -1,0 +1,68 @@
+{
+  "act1": {
+    "theme": "The Awakening - Discovery, Curiosity, and First Light",
+    "dailyMessages": [
+      {
+        "short": "Good morning",
+        "long": "You make ordinary days feel choreographed."
+      },
+      {
+        "short": "A thought",
+        "long": "The way you see art — that's how I see you."
+      },
+      {
+        "short": "Take a breath",
+        "long": "Even when you're busy, I hope today gives you one quiet breath."
+      },
+      {
+        "short": "Fun fact",
+        "long": "Flamingos mate for life. Just saying."
+      },
+      {
+        "short": "Truth",
+        "long": "The world's better every time you show up."
+      },
+      {
+        "short": "Keep going",
+        "long": "Keep dancing. The universe notices."
+      }
+    ],
+    "poemLines": [
+      "Before the stage knew your name, it already waited for your light.",
+      "Even silence moves when you enter a room.",
+      "I saw your reflection before I saw your face."
+    ],
+    "questions": [
+      {
+        "id": "act1-q1",
+        "puzzle": "echo-chamber",
+        "text": "What's one sound that always makes you feel safe?",
+        "options": [
+          "Rain",
+          "A heartbeat",
+          "Laughter",
+          "The ocean",
+          "Write my own",
+          "Ask me in person",
+          "Wouldn't you like to know?"
+        ],
+        "yourAnswer": "Your voice when you're excited about something you love"
+      },
+      {
+        "id": "act1-q2",
+        "puzzle": "reflections",
+        "text": "When you look in the mirror, what part of yourself are you most proud of?",
+        "options": [
+          "My eyes",
+          "My voice",
+          "My courage",
+          "My patience",
+          "Write my own",
+          "Ask me in person",
+          "None of your business 😉"
+        ],
+        "yourAnswer": "The way I keep trying even when things are hard"
+      }
+    ]
+  }
+}
