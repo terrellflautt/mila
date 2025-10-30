@@ -226,13 +226,13 @@ export class GalleryOfUs {
           font-size: 1.5rem;
           font-weight: 300;
           font-style: italic;
-          color: rgba(255, 255, 255, 0.7);
+          color: rgba(255, 235, 240, 0.95);
           margin-bottom: 1rem;
         }
 
         .gallery-description {
           font-size: 1.1rem;
-          color: rgba(255, 255, 255, 0.6);
+          color: rgba(255, 235, 240, 0.9);
           font-style: italic;
           line-height: 1.6;
         }
@@ -342,7 +342,7 @@ export class GalleryOfUs {
 
         .placeholder-text {
           font-size: 1rem;
-          color: rgba(255, 255, 255, 0.5);
+          color: rgba(255, 235, 240, 0.85);
           font-style: italic;
         }
 

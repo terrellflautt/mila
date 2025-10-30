@@ -1638,7 +1638,7 @@ const styles = `
   font-size: 0.75rem;
   font-weight: 300;
   line-height: 1.4;
-  color: rgba(255, 255, 255, 0.7);
+  color: rgba(255, 235, 240, 0.95);
 }
 
 .card-badge {
@@ -1891,7 +1891,7 @@ const styles = `
   text-align: center;
   font-family: 'Montserrat', sans-serif;
   font-size: 0.75rem;
-  color: rgba(255, 255, 255, 0.6);
+  color: rgba(255, 235, 240, 0.9);
 }
 
 .reset-confirmation-overlay {
@@ -1937,7 +1937,7 @@ const styles = `
   font-family: 'Montserrat', sans-serif;
   font-size: 1rem;
   line-height: 1.6;
-  color: rgba(255, 255, 255, 0.8);
+  color: rgba(255, 235, 240, 0.95);
   margin-bottom: 2rem;
 }
 

@@ -436,7 +436,7 @@ const styles = `
   font-family: 'Montserrat', sans-serif;
   font-size: 1rem;
   line-height: 1.8;
-  color: rgba(255, 255, 255, 0.85);
+  color: rgba(255, 245, 248, 0.95);
   text-align: left;
   max-width: 700px;
   margin: 0 auto;

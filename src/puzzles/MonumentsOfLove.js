@@ -487,7 +487,7 @@ const styles = `
 .monument-progress {
   font-family: 'Montserrat', sans-serif;
   font-size: 0.9rem;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(255, 235, 240, 0.9);
 }
 
 /* Outro Slide */
