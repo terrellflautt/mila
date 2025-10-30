@@ -416,12 +416,15 @@ export class GalleryOfUs {
         @media (max-width: 768px) {
           .gallery-of-us {
             padding: max(0.5rem, env(safe-area-inset-top)) max(0.75rem, env(safe-area-inset-right)) max(0.5rem, env(safe-area-inset-bottom)) max(0.75rem, env(safe-area-inset-left));
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
           }
 
           .gallery-container {
-            gap: 1rem;
+            gap: 0.75rem;
             padding: 0;
             max-width: 100%;
+            min-height: 0;
           }
 
           .gallery-header {
@@ -430,23 +433,23 @@ export class GalleryOfUs {
           }
 
           .gallery-title {
-            font-size: 1.75rem;
+            font-size: 1.5rem;
             margin-bottom: 0.25rem;
           }
 
           .gallery-subtitle {
-            font-size: 1rem;
-            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+            margin-bottom: 0.25rem;
           }
 
           .gallery-description {
-            font-size: 0.875rem;
-            line-height: 1.4;
+            font-size: 0.8rem;
+            line-height: 1.3;
           }
 
           .photo-grid {
             grid-template-columns: 1fr;
-            gap: 1rem;
+            gap: 0.75rem;
             padding: 0;
             width: 100%;
           }
@@ -455,16 +458,23 @@ export class GalleryOfUs {
             margin: 0 auto;
             max-width: 100%;
             width: 100%;
-            aspect-ratio: 16/10;
-            max-height: 200px;
+            aspect-ratio: 2/1;
+            max-height: 150px;
+            min-height: 120px;
           }
 
           .placeholder-icon {
-            font-size: 2rem;
+            font-size: 1.5rem;
           }
 
           .placeholder-text {
-            font-size: 0.875rem;
+            font-size: 0.75rem;
+            padding: 0 0.5rem;
+          }
+
+          .photo-caption {
+            font-size: 0.75rem;
+            padding: 0.5rem;
           }
 
           .gallery-exit-btn {
@@ -476,12 +486,17 @@ export class GalleryOfUs {
           }
 
           .upload-btn, .continue-btn {
-            padding: 0.75rem 1.5rem;
-            font-size: 1rem;
+            padding: 0.65rem 1.25rem;
+            font-size: 0.9rem;
           }
 
           .upload-icon {
-            font-size: 1.25rem;
+            font-size: 1.1rem;
+          }
+
+          .gallery-actions {
+            gap: 0.75rem;
+            flex-wrap: wrap;
           }
         }
       </style>

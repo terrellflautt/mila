@@ -201,7 +201,9 @@ export class EternalGarden {
         void main() {
           vec3 color1 = vec3(0.1, 0.15, 0.1); // Dark green
           vec3 color2 = vec3(0.15, 0.25, 0.15); // Lighter green
-          float pattern = sin(vUv.x * 20.0) * sin(vUv.y * 20.0);
+          // Add subtle animation with time
+          float timePattern = sin(time * 0.5) * 0.05 + 1.0;
+          float pattern = sin(vUv.x * 20.0) * sin(vUv.y * 20.0) * timePattern;
           vec3 color = mix(color1, color2, pattern * 0.5 + 0.5);
           gl_FragColor = vec4(color, 1.0);
         }
