@@ -218,16 +218,21 @@ export class Stage {
 
     this.curtain.isOpen = true;
 
+    // Responsive curtain opening distance
+    // On mobile, curtains should frame the page, not go completely offscreen
+    const isMobile = window.innerWidth <= 768;
+    const openDistance = isMobile ? 5.5 : 8;
+
     // Animate left curtain
     gsap.to(this.curtain.left.position, {
-      x: -8,
+      x: -openDistance,
       duration: 2.5,
       ease: 'power2.inOut'
     });
 
     // Animate right curtain
     gsap.to(this.curtain.right.position, {
-      x: 8,
+      x: openDistance,
       duration: 2.5,
       ease: 'power2.inOut'
     });

@@ -989,9 +989,18 @@ class MilasWorld {
               const remainingHidden = Object.entries(this.experiences)
                 .filter(([n, exp]) => exp.hidden && !exp.disabled && !this.discoveredExperiences.includes(n) && !exp.isFinal);
 
-              if (remainingHidden.length > 0 && !this.discoveryContainer) {
+              if (remainingHidden.length > 0) {
                 console.log('🌟 Restarting discovery elements - remaining:', remainingHidden.length);
-                this.createDiscoveryElements();
+
+                // If container exists, just update the list and create new wandering star
+                if (this.discoveryContainer) {
+                  this.hiddenExperiences = remainingHidden;
+                  this.currentDiscoveryWanderingStopped = false;
+                  this.createWanderingDiscoveryElement();
+                } else {
+                  // Container doesn't exist, create it fresh
+                  this.createDiscoveryElements();
+                }
               }
             }, 2000);
           });
@@ -1036,9 +1045,16 @@ class MilasWorld {
           const remaining = Object.entries(this.experiences)
             .filter(([n, exp]) => exp.hidden && !exp.disabled && !this.discoveredExperiences.includes(n) && !exp.isFinal);
 
-          if (remaining.length > 0 && !this.discoveryContainer) {
-            // Restart discovery elements if there are more to find
-            this.createDiscoveryElements();
+          if (remaining.length > 0) {
+            // If container exists, just update the list and create new wandering star
+            if (this.discoveryContainer) {
+              this.hiddenExperiences = remaining;
+              this.currentDiscoveryWanderingStopped = false;
+              this.createWanderingDiscoveryElement();
+            } else {
+              // Container doesn't exist, create it fresh
+              this.createDiscoveryElements();
+            }
           }
         }, 2000);
       }, 1500);
