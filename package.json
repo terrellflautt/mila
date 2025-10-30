@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "deploy": "npm run build && aws s3 sync dist/ s3://mila.terrellflautt.com --delete"
+    "deploy": "npm run build && aws s3 sync dist/ s3://milas-world-692859945539 --delete && aws cloudfront create-invalidation --distribution-id E3U8AGSSIVAVRH --paths '/*'"
   },
   "dependencies": {
     "canvas-confetti": "^1.9.2",

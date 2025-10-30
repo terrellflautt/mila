@@ -15,7 +15,7 @@ export class GalleryOfUs {
     this.element = null;
     this.photos = [];
     this.revealedPhotos = 0;
-    this.totalPhotos = 6; // Start with 6 slots
+    this.totalPhotos = 4; // Start with 4 slots (mobile-friendly)
     this.isComplete = false;
   }
 
@@ -247,6 +247,7 @@ export class GalleryOfUs {
         .photo-frame {
           position: relative;
           aspect-ratio: 4/3;
+          max-width: 500px;
           border-radius: 16px;
           overflow: hidden;
           background: rgba(255, 255, 255, 0.05);
@@ -414,44 +415,73 @@ export class GalleryOfUs {
 
         @media (max-width: 768px) {
           .gallery-of-us {
-            padding: 1rem 0.5rem;
-            padding: max(1rem, env(safe-area-inset-top)) max(0.5rem, env(safe-area-inset-right)) max(1rem, env(safe-area-inset-bottom)) max(0.5rem, env(safe-area-inset-left));
-          }
-
-          .gallery-of-us {
-            padding: max(1rem, env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right)) max(1rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
+            padding: max(0.5rem, env(safe-area-inset-top)) max(0.75rem, env(safe-area-inset-right)) max(0.5rem, env(safe-area-inset-bottom)) max(0.75rem, env(safe-area-inset-left));
           }
 
           .gallery-container {
-            gap: 1.5rem;
+            gap: 1rem;
+            padding: 0;
+            max-width: 100%;
           }
 
           .gallery-header {
-            /* Remove extra padding-top on mobile - already have safe-area padding */
             padding-top: 0;
+            padding-bottom: 0.5rem;
           }
 
           .gallery-title {
-            font-size: 2rem;
+            font-size: 1.75rem;
+            margin-bottom: 0.25rem;
           }
 
           .gallery-subtitle {
-            font-size: 1.2rem;
+            font-size: 1rem;
+            margin-bottom: 0.5rem;
           }
 
           .gallery-description {
-            font-size: 1rem;
+            font-size: 0.875rem;
+            line-height: 1.4;
           }
 
           .photo-grid {
             grid-template-columns: 1fr;
-            gap: 1.5rem;
-            padding: 0.5rem;
+            gap: 1rem;
+            padding: 0;
+            width: 100%;
+          }
+
+          .photo-frame {
+            margin: 0 auto;
+            max-width: 100%;
+            width: 100%;
+            aspect-ratio: 16/10;
+            max-height: 200px;
+          }
+
+          .placeholder-icon {
+            font-size: 2rem;
+          }
+
+          .placeholder-text {
+            font-size: 0.875rem;
           }
 
           .gallery-exit-btn {
             top: max(0.5rem, env(safe-area-inset-top));
             right: max(0.5rem, env(safe-area-inset-right));
+            width: 36px;
+            height: 36px;
+            font-size: 1.25rem;
+          }
+
+          .upload-btn, .continue-btn {
+            padding: 0.75rem 1.5rem;
+            font-size: 1rem;
+          }
+
+          .upload-icon {
+            font-size: 1.25rem;
           }
         }
       </style>

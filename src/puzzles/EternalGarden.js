@@ -31,6 +31,7 @@ export class EternalGarden {
     this.lastTimeUpdate = Date.now();
     this.stars = [];
     this.shootingStars = [];
+    this.ground = null; // Store ground mesh for uniform updates
   }
 
   /**
@@ -207,10 +208,10 @@ export class EternalGarden {
       `
     });
 
-    const ground = new THREE.Mesh(groundGeometry, groundMaterial);
-    ground.rotation.x = -Math.PI / 2;
-    ground.position.y = -5;
-    this.scene.add(ground);
+    this.ground = new THREE.Mesh(groundGeometry, groundMaterial);
+    this.ground.rotation.x = -Math.PI / 2;
+    this.ground.position.y = -5;
+    this.scene.add(this.ground);
 
     // Ambient fireflies/particles
     this.createAmbientParticles();
@@ -549,9 +550,7 @@ export class EternalGarden {
     // Flamingos fly in halfway through (after 6 flowers)
     if (this.bloomCount === 6 && !this.flamingosArrived) {
       this.flamingosArrived = true;
-      console.log('🦩 Flamingos should fly in now! Bloom count:', this.bloomCount);
       setTimeout(() => {
-        console.log('🦩 Calling flamingosFlyIn()...');
         this.flamingosFlyIn();
       }, 1000);
     }
@@ -608,7 +607,6 @@ export class EternalGarden {
     });
 
     // Wait a moment for user to appreciate the garden
-    console.log('🌸 Eternal Garden complete!');
     await new Promise(resolve => setTimeout(resolve, 2000));
 
     // Show final message
@@ -1006,6 +1004,11 @@ export class EternalGarden {
 
     this.time += 0.01;
 
+    // Update ground shader uniform
+    if (this.ground && this.ground.material.uniforms) {
+      this.ground.material.uniforms.time.value = this.time;
+    }
+
     // Gentle camera sway
     this.camera.position.x = Math.sin(this.time * 0.1) * 3;
     this.camera.lookAt(0, 0, 0);
@@ -1209,6 +1212,9 @@ const styles = `
   border: 2px solid rgba(136, 238, 136, 0.6);
   box-shadow: 0 0 60px rgba(136, 238, 136, 0.3);
   max-width: 700px;
+  max-height: 85vh;
+  max-height: 85dvh;
+  overflow-y: auto;
   z-index: 10;
 }
 
@@ -1254,9 +1260,13 @@ const styles = `
     font-size: 0.8rem;
   }
 
+  .garden-final {
+    padding: 2rem 1.5rem;
+    max-width: 90%;
+  }
+
   .final-text {
     font-size: 1.2rem;
-    padding: 2rem;
   }
 
   .final-signature {
@@ -1274,8 +1284,14 @@ const styles = `
     font-size: 0.75rem;
   }
 
+  .garden-final {
+    padding: 1.5rem 1rem;
+    max-width: 95%;
+  }
+
   .final-text {
     font-size: 1.1rem;
+    line-height: 1.6;
   }
 }
 `;
