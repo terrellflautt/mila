@@ -1,12 +1,13 @@
 /**
- * Act III - Finale: "Eternal Garden"
- * A living, breathing particle garden that grows with her presence
- * Each interaction plants seeds that bloom into beautiful patterns
+ * Eternal Garden - Beautiful, Artistic Edition
+ * A stunning, impressionistic garden experience for mobile
+ * Enhanced with interactive planting, growth simulation, and genetics
  */
 
 import * as THREE from 'three';
 import gsap from 'gsap';
-import confetti from 'canvas-confetti';
+import { animate as anime } from 'animejs';
+import { GardenSimulator, GrowthStages } from '../utils/gardenSimulator.js';
 
 export class EternalGarden {
   constructor(onComplete) {
@@ -15,421 +16,1654 @@ export class EternalGarden {
     this.scene = null;
     this.camera = null;
     this.renderer = null;
-    this.flowers = [];
-    this.particles = [];
-    this.seeds = [];
-    this.bloomCount = 0;
-    this.targetBlooms = 12;
-    this.isComplete = false;
-    this.isAnimating = true; // Flag to control animation loop
+    this.isAnimating = true;
     this.raycaster = new THREE.Raycaster();
     this.mouse = new THREE.Vector2();
     this.audioContext = null;
-    this.time = 0;
-    this.flamingosArrived = false;
-    this.gameTime = 6; // Start at 6 AM (sunrise)
-    this.lastTimeUpdate = Date.now();
-    this.stars = [];
+
+    // Time management
+    this.realTime = 0;
+    this.gameTime = 6; // Start at dawn
+    this.timeScale = 0.075; // 5x faster day/night cycle (about 5.3 minutes for full cycle)
+    this.lastTime = performance.now() / 1000;
+
+    // Garden state
+    this.isComplete = false;
+    this.simulator = new GardenSimulator();
+    this.visitStartTime = null;
+    this.poemsUnlocked = 0;
+
+    // UI interaction state
+    this.selectedPlants = [];
+    this.selectedAction = 'plant'; // 'plant', 'water', 'fertilize', 'harvest', 'crossbreed'
+    this.atmosphericParticles = [];
+
+    // Poems to unlock
+    this.poems = [
+      "Time moves slower in the garden.",
+      "Seeds become promises.",
+      "Blooms hold secrets.",
+      "Moments unfold quietly.",
+      "You touch beauty.",
+      "Beauty answers back."
+    ];
+
+    // Systems
+    this.plantMeshes = new Map(); // Map of plant ID -> THREE.Group
+    this.flamingos = [];
+    this.goldfish = [];
+    this.ground = null;
+    this.stars = null;
+    this.mist = null;
+    this.atmosphericParticleSystem = null;
+    this.butterflies = [];
+
+    // Day/night palette - enhanced with more vibrant colors
+    this.palette = {
+      dayTop: new THREE.Color(0x87CEEB),      // Sky blue
+      dayBottom: new THREE.Color(0xffeaa7),   // Soft yellow
+      dawnTop: new THREE.Color(0xFFB6C1),     // Light pink
+      dawnBottom: new THREE.Color(0xFFD4A3),  // Peach
+      duskTop: new THREE.Color(0xFF6B9D),     // Vibrant pink
+      duskBottom: new THREE.Color(0xFF8E53),  // Orange-rose
+      nightTop: new THREE.Color(0x1e3a8a),    // Deep navy blue
+      nightBottom: new THREE.Color(0x2d1b3d)  // Dark purple
+    };
+
+    // Shooting star system
     this.shootingStars = [];
-    this.ground = null; // Store ground mesh for uniform updates
+    this.lastShootingStar = 0;
   }
 
-  /**
-   * Show the puzzle
-   */
+  isMobile() {
+    return true; // Always optimize for mobile
+  }
+
   show() {
     this.element = this.createPuzzleElement();
     document.body.appendChild(this.element);
 
-    // Initialize Three.js scene
     this.initScene();
-
-    // Create initial garden elements
     this.createGardenBase();
-
-    // Add interaction
     this.addEventListeners();
 
-    // Animate in
     gsap.fromTo(this.element,
       { opacity: 0 },
-      {
-        opacity: 1,
-        duration: 1.5,
-        ease: 'power2.out'
-      }
+      { opacity: 1, duration: 2, ease: 'power2.out' }
     );
 
-    // Start render loop
     this.animate();
-
-    // Initialize audio
     this.initAudio();
+
+    this.visitStartTime = performance.now();
   }
 
-  /**
-   * Create puzzle HTML
-   */
   createPuzzleElement() {
     const puzzle = document.createElement('div');
     puzzle.className = 'garden-puzzle';
     puzzle.innerHTML = `
       <div class="garden-container">
-        <button class="garden-exit-btn" title="Return to Gallery">
+        <button class="garden-exit-btn" title="Return">
           <span class="exit-icon">✕</span>
         </button>
 
-        <div class="garden-header">
-          <div class="puzzle-title">Eternal Garden</div>
-          <div class="puzzle-subtitle">Plant seeds with your presence, watch them grow into something lasting</div>
-        </div>
-
         <div class="garden-canvas-container">
-          <!-- Three.js canvas will be inserted here -->
+          <!-- Three.js canvas -->
         </div>
 
-        <div class="garden-progress">
-          <div class="progress-text">${this.bloomCount} of ${this.targetBlooms} flowers blooming</div>
+        <div class="garden-time-indicator">
+          <span class="current-time">Dawn</span>
         </div>
 
-        <div class="garden-hint">
-          <div class="hint-icon">🌱</div>
-          <div class="hint-text">Click to plant seeds... watch them grow</div>
+        <!-- Resources & Skill Panel -->
+        <div class="garden-resources-panel">
+          <div class="skill-display">
+            <div class="skill-icon">🌱</div>
+            <div class="skill-info">
+              <div class="skill-level">Lv. <span id="skill-level">1</span></div>
+              <div class="xp-bar">
+                <div class="xp-fill" id="xp-fill"></div>
+              </div>
+            </div>
+          </div>
+          <div class="resources">
+            <div class="resource">
+              <span class="resource-icon">🌾</span>
+              <span class="resource-value" id="seeds-count">3</span>
+            </div>
+            <div class="resource">
+              <span class="resource-icon">💧</span>
+              <span class="resource-value" id="water-count">10</span>
+            </div>
+            <div class="resource">
+              <span class="resource-icon">✨</span>
+              <span class="resource-value" id="fertilizer-count">5</span>
+            </div>
+          </div>
         </div>
+
+        <!-- Action Buttons -->
+        <div class="garden-actions">
+          <button class="action-btn active" data-action="plant" title="Plant Seed">
+            <span class="action-icon">🌱</span>
+          </button>
+          <button class="action-btn" data-action="water" title="Water Plant">
+            <span class="action-icon">💧</span>
+          </button>
+          <button class="action-btn" data-action="fertilize" title="Fertilize Plant">
+            <span class="action-icon">✨</span>
+          </button>
+          <button class="action-btn" data-action="harvest" title="Harvest Plant">
+            <span class="action-icon">🌸</span>
+          </button>
+          <button class="action-btn" data-action="crossbreed" title="Cross-breed Plants">
+            <span class="action-icon">🧬</span>
+          </button>
+        </div>
+
+        <!-- Info Display -->
+        <div class="garden-info" id="garden-info"></div>
       </div>
     `;
 
     return puzzle;
   }
 
-  /**
-   * Initialize Three.js scene
-   */
   initScene() {
     const container = this.element.querySelector('.garden-canvas-container');
     const width = container.clientWidth;
     const height = container.clientHeight;
 
-    // Scene
     this.scene = new THREE.Scene();
 
-    // Dynamic background canvas for day/night cycle
+    // Soft atmospheric fog
+    this.scene.fog = new THREE.FogExp2(0xffeaa7, 0.015);
+
+    // Dynamic background
     this.bgCanvas = document.createElement('canvas');
     this.bgCanvas.width = 2;
     this.bgCanvas.height = 256;
     this.bgContext = this.bgCanvas.getContext('2d');
-
-    this.bgTexture = new THREE.Texture(this.bgCanvas);
-    this.bgTexture.needsUpdate = true;
+    this.bgTexture = new THREE.CanvasTexture(this.bgCanvas);
     this.scene.background = this.bgTexture;
 
-    // Create stars for night sky
-    this.createStars();
-
     // Camera
-    this.camera = new THREE.PerspectiveCamera(60, width / height, 0.1, 1000);
-    this.camera.position.z = 40;
-    this.camera.position.y = 5;
+    this.camera = new THREE.PerspectiveCamera(50, width / height, 0.1, 1000);
+    this.camera.position.set(0, 6, 20);
+    this.camera.lookAt(0, 0, 0);
 
-    // Renderer
-    this.renderer = new THREE.WebGLRenderer({ antialias: true });
+    // Renderer with better settings
+    this.renderer = new THREE.WebGLRenderer({
+      antialias: true,
+      alpha: false,
+      powerPreference: 'high-performance'
+    });
     this.renderer.setSize(width, height);
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    this.renderer.toneMappingExposure = 1.2;
+    this.renderer.shadowMap.enabled = false; // Keep performance good
     container.appendChild(this.renderer.domElement);
 
-    // Lighting
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
-    this.scene.add(ambientLight);
+    // Soft, warm lighting
+    this.ambientLight = new THREE.HemisphereLight(0xffeaa7, 0x8b7355, 0.6);
+    this.scene.add(this.ambientLight);
 
-    const sunLight = new THREE.DirectionalLight(0xffd9b3, 0.6);
-    sunLight.position.set(20, 30, 20);
-    this.scene.add(sunLight);
+    this.sunLight = new THREE.DirectionalLight(0xffd4a3, 1.2);
+    this.sunLight.position.set(15, 20, 10);
+    this.sunLight.castShadow = false; // Keep performance good
+    this.scene.add(this.sunLight);
 
-    // Resize handler
     window.addEventListener('resize', () => this.onResize());
   }
 
-  /**
-   * Create stars for night sky
-   */
-  createStars() {
-    const starGeometry = new THREE.BufferGeometry();
-    const starCount = 200;
-    const positions = new Float32Array(starCount * 3);
+  createGardenBase() {
+    // Beautiful gradient ground
+    this.createGround();
 
-    for (let i = 0; i < starCount * 3; i += 3) {
-      positions[i] = (Math.random() - 0.5) * 100;     // x
-      positions[i + 1] = Math.random() * 50 + 10;     // y (above ground)
-      positions[i + 2] = (Math.random() - 0.5) * 100; // z
-    }
+    // Stars for night
+    this.createStars();
 
-    starGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    // Atmospheric mist particles
+    this.createMist();
 
-    const starMaterial = new THREE.PointsMaterial({
-      color: 0xffffff,
-      size: 0.5,
-      transparent: true,
-      opacity: 0
-    });
+    // Fireflies
+    this.createFireflies();
 
-    const starField = new THREE.Points(starGeometry, starMaterial);
-    this.scene.add(starField);
-    this.stars.push(starField);
+    // Atmospheric particles (pollen, butterflies)
+    this.createAtmosphericParticles();
+
+    // Butterflies
+    this.createButterflies();
+
+    // 2 Pink flamingos
+    this.createFlamingos();
+
+    // Garden details (rocks, grass patches)
+    this.createGardenDetails();
+
+    // Pond with goldfish
+    this.createPond();
+
+    // Load existing plants from simulator
+    this.loadExistingPlants();
   }
 
-  /**
-   * Create garden base
-   */
-  createGardenBase() {
-    // Ground plane
-    const groundGeometry = new THREE.PlaneGeometry(100, 100, 20, 20);
+  createGround() {
+    const groundGeometry = new THREE.PlaneGeometry(80, 80, 32, 32);
+
+    // Add gentle terrain variation
+    const positions = groundGeometry.attributes.position.array;
+    for (let i = 0; i < positions.length; i += 3) {
+      const x = positions[i];
+      const y = positions[i + 1];
+      positions[i + 2] = Math.sin(x * 0.1) * 0.3 + Math.cos(y * 0.1) * 0.3;
+    }
+    groundGeometry.attributes.position.needsUpdate = true;
+    groundGeometry.computeVertexNormals();
+
     const groundMaterial = new THREE.ShaderMaterial({
       uniforms: {
-        time: { value: 0 }
+        time: { value: 0 },
+        dayNightPhase: { value: 0.5 }
       },
       vertexShader: `
         varying vec2 vUv;
+        varying vec3 vWorldPos;
         void main() {
           vUv = uv;
+          vec4 worldPos = modelMatrix * vec4(position, 1.0);
+          vWorldPos = worldPos.xyz;
           gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
         }
       `,
       fragmentShader: `
         uniform float time;
+        uniform float dayNightPhase;
         varying vec2 vUv;
+        varying vec3 vWorldPos;
 
         void main() {
-          vec3 color1 = vec3(0.1, 0.15, 0.1); // Dark green
-          vec3 color2 = vec3(0.15, 0.25, 0.15); // Lighter green
-          // Add subtle animation with time
-          float timePattern = sin(time * 0.5) * 0.05 + 1.0;
-          float pattern = sin(vUv.x * 20.0) * sin(vUv.y * 20.0) * timePattern;
-          vec3 color = mix(color1, color2, pattern * 0.5 + 0.5);
+          // Radial gradient from center
+          vec2 center = vec2(0.5, 0.5);
+          float dist = length(vUv - center);
+
+          // Day: warm golden green
+          vec3 dayCenter = vec3(0.35, 0.45, 0.25);
+          vec3 dayEdge = vec3(0.22, 0.35, 0.18);
+
+          // Night: cool deep blue-green
+          vec3 nightCenter = vec3(0.12, 0.18, 0.22);
+          vec3 nightEdge = vec3(0.08, 0.12, 0.15);
+
+          vec3 centerColor = mix(nightCenter, dayCenter, dayNightPhase);
+          vec3 edgeColor = mix(nightEdge, dayEdge, dayNightPhase);
+
+          vec3 color = mix(centerColor, edgeColor, smoothstep(0.0, 0.8, dist));
+
+          // Organic texture
+          float pattern = sin(vWorldPos.x * 1.5 + time * 0.1) * cos(vWorldPos.z * 1.5 + time * 0.1);
+          color += vec3(pattern * 0.015);
+
+          // Distance fade
+          float fade = smoothstep(30.0, 15.0, dist * 40.0);
+          color *= fade * 0.8 + 0.2;
+
           gl_FragColor = vec4(color, 1.0);
         }
-      `
+      `,
+      side: THREE.DoubleSide
     });
 
     this.ground = new THREE.Mesh(groundGeometry, groundMaterial);
     this.ground.rotation.x = -Math.PI / 2;
-    this.ground.position.y = -5;
+    this.ground.position.y = -2.5;
     this.scene.add(this.ground);
-
-    // Ambient fireflies/particles
-    this.createAmbientParticles();
   }
 
-  /**
-   * Create ambient floating particles
-   */
-  createAmbientParticles() {
-    const particleCount = 50;
-    for (let i = 0; i < particleCount; i++) {
-      const geometry = new THREE.SphereGeometry(0.1, 8, 8);
-      const material = new THREE.MeshBasicMaterial({
-        color: new THREE.Color().setHSL(Math.random(), 0.7, 0.7),
-        transparent: true,
-        opacity: 0.6
-      });
-      const particle = new THREE.Mesh(geometry, material);
+  createStars() {
+    const count = 150;
+    const positions = new Float32Array(count * 3);
+    const sizes = new Float32Array(count);
 
-      particle.position.x = (Math.random() - 0.5) * 60;
-      particle.position.y = Math.random() * 30 - 5;
-      particle.position.z = (Math.random() - 0.5) * 60;
+    for (let i = 0; i < count; i++) {
+      positions[i * 3] = (Math.random() - 0.5) * 120;
+      positions[i * 3 + 1] = Math.random() * 40 + 15;
+      positions[i * 3 + 2] = (Math.random() - 0.5) * 120;
+      sizes[i] = Math.random() * 1.5 + 0.5;
+    }
 
-      this.particles.push(particle);
-      this.scene.add(particle);
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    geometry.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
 
-      // Floating animation
-      gsap.to(particle.position, {
-        y: particle.position.y + (Math.random() * 10 - 5),
-        duration: 5 + Math.random() * 5,
-        yoyo: true,
-        repeat: -1,
-        ease: 'sine.inOut'
-      });
+    const material = new THREE.ShaderMaterial({
+      transparent: true,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      uniforms: {
+        opacity: { value: 0 },
+        time: { value: 0 }
+      },
+      vertexShader: `
+        attribute float size;
+        uniform float time;
+        varying float vOpacity;
+        void main() {
+          vOpacity = 0.5 + sin(time + position.x * 0.1) * 0.5;
+          vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+          gl_PointSize = size * (300.0 / -mvPosition.z);
+          gl_Position = projectionMatrix * mvPosition;
+        }
+      `,
+      fragmentShader: `
+        uniform float opacity;
+        varying float vOpacity;
+        void main() {
+          vec2 center = gl_PointCoord - vec2(0.5);
+          float dist = length(center);
+          float alpha = smoothstep(0.5, 0.0, dist) * opacity * vOpacity;
+          gl_FragColor = vec4(1.0, 1.0, 0.95, alpha);
+        }
+      `
+    });
 
-      // Pulse opacity
-      gsap.to(particle.material, {
-        opacity: Math.random() * 0.4 + 0.2,
-        duration: 2 + Math.random() * 2,
-        yoyo: true,
-        repeat: -1,
-        ease: 'sine.inOut'
-      });
+    this.stars = new THREE.Points(geometry, material);
+    this.scene.add(this.stars);
+  }
+
+  createMist() {
+    const count = 30;
+    const positions = new Float32Array(count * 3);
+    const sizes = new Float32Array(count);
+
+    for (let i = 0; i < count; i++) {
+      positions[i * 3] = (Math.random() - 0.5) * 40;
+      positions[i * 3 + 1] = Math.random() * 8 - 1;
+      positions[i * 3 + 2] = (Math.random() - 0.5) * 40;
+      sizes[i] = Math.random() * 8 + 4;
+    }
+
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    geometry.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
+
+    const material = new THREE.PointsMaterial({
+      size: 6,
+      color: 0xffeaa7,
+      transparent: true,
+      opacity: 0.08,
+      blending: THREE.NormalBlending,
+      depthWrite: false,
+      sizeAttenuation: true
+    });
+
+    this.mist = new THREE.Points(geometry, material);
+    this.scene.add(this.mist);
+  }
+
+  createFireflies() {
+    const count = 50;
+    const positions = new Float32Array(count * 3);
+    const speeds = new Float32Array(count);
+
+    for (let i = 0; i < count; i++) {
+      positions[i * 3] = (Math.random() - 0.5) * 30;
+      positions[i * 3 + 1] = Math.random() * 10 + 0.5;
+      positions[i * 3 + 2] = (Math.random() - 0.5) * 30;
+      speeds[i] = 0.05 + Math.random() * 0.15;
+    }
+
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    geometry.setAttribute('speed', new THREE.BufferAttribute(speeds, 1));
+
+    const material = new THREE.PointsMaterial({
+      size: 0.15,
+      color: 0xffd700,
+      transparent: true,
+      opacity: 0.7,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false
+    });
+
+    this.fireflySystem = new THREE.Points(geometry, material);
+    this.scene.add(this.fireflySystem);
+  }
+
+  createAtmosphericParticles() {
+    // Floating pollen/dust particles
+    const count = 100;
+    const positions = new Float32Array(count * 3);
+    const velocities = new Float32Array(count * 3);
+    const sizes = new Float32Array(count);
+
+    for (let i = 0; i < count; i++) {
+      positions[i * 3] = (Math.random() - 0.5) * 40;
+      positions[i * 3 + 1] = Math.random() * 15;
+      positions[i * 3 + 2] = (Math.random() - 0.5) * 40;
+
+      velocities[i * 3] = (Math.random() - 0.5) * 0.02;
+      velocities[i * 3 + 1] = Math.random() * 0.01 + 0.005;
+      velocities[i * 3 + 2] = (Math.random() - 0.5) * 0.02;
+
+      sizes[i] = Math.random() * 0.5 + 0.3;
+    }
+
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    geometry.setAttribute('velocity', new THREE.BufferAttribute(velocities, 3));
+    geometry.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
+
+    const material = new THREE.ShaderMaterial({
+      transparent: true,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      uniforms: {
+        time: { value: 0 },
+        opacity: { value: 0.6 },
+        dayNightPhase: { value: 1.0 }
+      },
+      vertexShader: `
+        attribute float size;
+        attribute vec3 velocity;
+        uniform float time;
+        varying float vOpacity;
+        void main() {
+          vOpacity = 0.3 + sin(time * 2.0 + position.x) * 0.3;
+          vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+          gl_PointSize = size * (300.0 / -mvPosition.z);
+          gl_Position = projectionMatrix * mvPosition;
+        }
+      `,
+      fragmentShader: `
+        uniform float opacity;
+        uniform float dayNightPhase;
+        varying float vOpacity;
+        void main() {
+          vec2 center = gl_PointCoord - vec2(0.5);
+          float dist = length(center);
+          float alpha = smoothstep(0.5, 0.0, dist) * opacity * vOpacity * dayNightPhase;
+
+          // Warm golden color during day
+          vec3 color = vec3(1.0, 0.95, 0.7);
+
+          gl_FragColor = vec4(color, alpha);
+        }
+      `
+    });
+
+    this.atmosphericParticleSystem = new THREE.Points(geometry, material);
+    this.scene.add(this.atmosphericParticleSystem);
+  }
+
+  createButterflies() {
+    // Create 5 butterflies that fly around
+    for (let i = 0; i < 5; i++) {
+      const butterfly = this.createButterfly();
+
+      const angle = (i / 5) * Math.PI * 2;
+      const radius = 8 + Math.random() * 5;
+
+      butterfly.position.set(
+        Math.cos(angle) * radius,
+        2 + Math.random() * 3,
+        Math.sin(angle) * radius
+      );
+
+      butterfly.userData = {
+        flyAngle: angle,
+        flySpeed: 0.3 + Math.random() * 0.2,
+        flyRadius: radius,
+        bobPhase: Math.random() * Math.PI * 2,
+        wingPhase: Math.random() * Math.PI * 2
+      };
+
+      this.butterflies.push(butterfly);
+      this.scene.add(butterfly);
     }
   }
 
-  /**
-   * Initialize audio context
-   */
+  createButterfly() {
+    const group = new THREE.Group();
+
+    // Simple butterfly geometry
+    const wingGeo = new THREE.CircleGeometry(0.15, 6);
+    const wingMat = new THREE.MeshStandardMaterial({
+      color: new THREE.Color().setHSL(Math.random(), 0.7, 0.6),
+      side: THREE.DoubleSide,
+      transparent: true,
+      opacity: 0.8,
+      emissive: new THREE.Color().setHSL(Math.random(), 0.5, 0.2),
+      emissiveIntensity: 0.3
+    });
+
+    const leftWing = new THREE.Mesh(wingGeo, wingMat);
+    leftWing.position.x = -0.1;
+    leftWing.rotation.y = Math.PI * 0.3;
+    group.add(leftWing);
+
+    const rightWing = new THREE.Mesh(wingGeo.clone(), wingMat.clone());
+    rightWing.position.x = 0.1;
+    rightWing.rotation.y = -Math.PI * 0.3;
+    group.add(rightWing);
+
+    // Store wings for animation
+    group.userData.wings = [leftWing, rightWing];
+
+    // Body
+    const bodyGeo = new THREE.CapsuleGeometry(0.02, 0.15, 4, 8);
+    const bodyMat = new THREE.MeshStandardMaterial({
+      color: 0x2a2a2a,
+      roughness: 0.8
+    });
+    const body = new THREE.Mesh(bodyGeo, bodyMat);
+    body.rotation.z = Math.PI / 2;
+    group.add(body);
+
+    group.scale.setScalar(0.8);
+
+    return group;
+  }
+
+  createFlamingos() {
+    // Create 2 flamingos with a love story
+    // They start separated, meet, and end up together
+
+    // Flamingo 1 - starts from left side
+    const flamingo1 = this.createFlamingo();
+    flamingo1.position.set(-20, 5, -15); // Start off-screen left, elevated for flying in
+    flamingo1.userData = {
+      id: 1,
+      state: 'flying_in', // flying_in, wandering_solo, meeting, together, sleeping
+      walkSpeed: 0.02,
+      flySpeed: 0.15,
+      walkDirection: new THREE.Vector3(1, 0, 0.5).normalize(),
+      turnTimer: 3,
+      bobPhase: 0,
+      meetingPoint: null,
+      partner: null,
+      stateTimer: 0,
+      flyStartTime: 0,
+      sleepPosition: new THREE.Vector3(-1.5, -2.0, -1.5) // Near pond
+    };
+    this.flamingos.push(flamingo1);
+    this.scene.add(flamingo1);
+
+    // Flamingo 2 - starts from right side (enters after first one)
+    const flamingo2 = this.createFlamingo();
+    flamingo2.position.set(20, 5, 15); // Start off-screen right, elevated
+    flamingo2.userData = {
+      id: 2,
+      state: 'waiting', // Waits before flying in
+      walkSpeed: 0.02,
+      flySpeed: 0.15,
+      walkDirection: new THREE.Vector3(-1, 0, -0.5).normalize(),
+      turnTimer: 3,
+      bobPhase: Math.PI,
+      meetingPoint: null,
+      partner: null,
+      stateTimer: 10, // Wait 10 seconds before flying in
+      flyStartTime: 0,
+      sleepPosition: new THREE.Vector3(1.5, -2.0, 1.5) // Near pond, opposite side
+    };
+    this.flamingos.push(flamingo2);
+    this.scene.add(flamingo2);
+
+    // Link them as partners
+    flamingo1.userData.partner = flamingo2;
+    flamingo2.userData.partner = flamingo1;
+
+    // Fly in animation for flamingo 1
+    this.flyInFlamingo(flamingo1, new THREE.Vector3(-8, -2.0, -6));
+  }
+
+  createFlamingo() {
+    const group = new THREE.Group();
+
+    // Origami-style material (flat shading for paper look)
+    const origamiMat = new THREE.MeshStandardMaterial({
+      color: 0xFF6B9D,
+      flatShading: true,
+      roughness: 0.9,
+      metalness: 0
+    });
+
+    const darkMat = new THREE.MeshStandardMaterial({
+      color: 0xCC5577,
+      flatShading: true,
+      roughness: 0.9
+    });
+
+    // Body (angular box for origami look)
+    const bodyGeo = new THREE.BoxGeometry(0.5, 0.6, 0.4);
+    const body = new THREE.Mesh(bodyGeo, origamiMat);
+    body.position.y = 1.2;
+    body.rotation.y = Math.PI / 8;
+    group.add(body);
+
+    // Neck (thin angular cylinder)
+    const neckGeo = new THREE.CylinderGeometry(0.08, 0.12, 1.0, 6);
+    const neck = new THREE.Mesh(neckGeo, origamiMat);
+    neck.position.set(0.2, 1.8, 0.1);
+    neck.rotation.z = 0.4;
+    group.add(neck);
+
+    // Head (small pyramid/angular)
+    const headGeo = new THREE.TetrahedronGeometry(0.15);
+    const head = new THREE.Mesh(headGeo, origamiMat);
+    head.position.set(0.5, 2.3, 0.15);
+    group.add(head);
+
+    // Beak (small cone)
+    const beakGeo = new THREE.ConeGeometry(0.06, 0.2, 4);
+    const beak = new THREE.Mesh(beakGeo, new THREE.MeshStandardMaterial({
+      color: 0x2a2a2a,
+      flatShading: true,
+      roughness: 0.9
+    }));
+    beak.position.set(0.62, 2.3, 0.15);
+    beak.rotation.z = -Math.PI / 2;
+    group.add(beak);
+
+    // Wings (triangular/angular for origami)
+    const wingGeo = new THREE.BufferGeometry();
+    const wingVertices = new Float32Array([
+      0, 0, 0,
+      0.8, 0, 0,
+      0.4, 0, 0.6
+    ]);
+    wingGeo.setAttribute('position', new THREE.BufferAttribute(wingVertices, 3));
+    wingGeo.computeVertexNormals();
+
+    const leftWing = new THREE.Mesh(wingGeo, darkMat);
+    leftWing.position.set(-0.2, 1.2, 0);
+    leftWing.rotation.y = Math.PI;
+    leftWing.rotation.z = -0.3;
+    group.add(leftWing);
+
+    const rightWing = new THREE.Mesh(wingGeo.clone(), darkMat);
+    rightWing.position.set(0.2, 1.2, 0);
+    rightWing.rotation.z = 0.3;
+    group.add(rightWing);
+
+    if (!group.userData.wings) group.userData.wings = [];
+    group.userData.wings.push(leftWing, rightWing);
+
+    // Legs (thin angular cylinders)
+    for (let i = 0; i < 2; i++) {
+      const legGeo = new THREE.CylinderGeometry(0.04, 0.04, 0.8, 4);
+      const leg = new THREE.Mesh(legGeo, origamiMat);
+      leg.position.set(i === 0 ? -0.12 : 0.12, 0.4, 0);
+      group.add(leg);
+    }
+
+    // Tail (angular triangle)
+    const tailGeo = new THREE.ConeGeometry(0.15, 0.35, 4);
+    const tail = new THREE.Mesh(tailGeo, darkMat);
+    tail.position.set(-0.35, 1.25, 0);
+    tail.rotation.z = Math.PI / 2;
+    group.add(tail);
+
+    group.scale.setScalar(0.5); // Make them smaller
+
+    return group;
+  }
+
+  // Flamingo love story animation helpers
+  flyInFlamingo(flamingo, targetPos) {
+    const userData = flamingo.userData;
+    userData.state = 'flying_in';
+    userData.flyStartTime = this.realTime;
+
+    // Animate wings faster during flight
+    if (userData.wings) {
+      userData.wings.forEach((wing, i) => {
+        gsap.to(wing.rotation, {
+          z: (i === 0 ? -0.8 : 0.8),
+          duration: 0.2,
+          repeat: -1,
+          yoyo: true,
+          ease: 'sine.inOut'
+        });
+      });
+    }
+
+    // Fly to target position with arc
+    gsap.to(flamingo.position, {
+      x: targetPos.x,
+      y: targetPos.y,
+      z: targetPos.z,
+      duration: 8,
+      ease: 'power2.inOut',
+      onUpdate: () => {
+        // Arc trajectory (goes up then down)
+        const progress = (this.realTime - userData.flyStartTime) / 8;
+        if (progress < 1) {
+          flamingo.position.y = targetPos.y + Math.sin(progress * Math.PI) * 3;
+        }
+      },
+      onComplete: () => {
+        userData.state = 'wandering_solo';
+        userData.stateTimer = 15 + Math.random() * 10; // Wander for a while before meeting
+        // Slow down wings after landing
+        if (userData.wings) {
+          userData.wings.forEach((wing, i) => {
+            gsap.to(wing.rotation, {
+              z: (i === 0 ? -0.3 : 0.3),
+              duration: 0.5,
+              overwrite: true
+            });
+          });
+        }
+      }
+    });
+  }
+
+  startMeeting(flamingo1, flamingo2) {
+    // Choose a meeting point between them
+    const meetingPoint = new THREE.Vector3(
+      (flamingo1.position.x + flamingo2.position.x) / 2,
+      -2.0,
+      (flamingo1.position.z + flamingo2.position.z) / 2
+    );
+
+    flamingo1.userData.state = 'meeting';
+    flamingo1.userData.meetingPoint = meetingPoint;
+    flamingo1.userData.stateTimer = 0;
+
+    flamingo2.userData.state = 'meeting';
+    flamingo2.userData.meetingPoint = meetingPoint;
+    flamingo2.userData.stateTimer = 0;
+  }
+
+  flyAwayTogether(flamingo1, flamingo2) {
+    // Fly away off-screen together
+    const direction = new THREE.Vector3(
+      Math.random() - 0.5,
+      0,
+      Math.random() - 0.5
+    ).normalize();
+
+    const targetPos1 = new THREE.Vector3(
+      direction.x * 25,
+      5,
+      direction.z * 25
+    );
+
+    const targetPos2 = new THREE.Vector3(
+      direction.x * 25 + 2,
+      5,
+      direction.z * 25 + 2
+    );
+
+    flamingo1.userData.state = 'flying_away';
+    flamingo2.userData.state = 'flying_away';
+
+    // Faster wing flapping
+    [flamingo1, flamingo2].forEach(flamingo => {
+      if (flamingo.userData.wings) {
+        flamingo.userData.wings.forEach((wing, i) => {
+          gsap.to(wing.rotation, {
+            z: (i === 0 ? -0.8 : 0.8),
+            duration: 0.15,
+            repeat: -1,
+            yoyo: true,
+            ease: 'sine.inOut',
+            overwrite: true
+          });
+        });
+      }
+    });
+
+    // Fly away with slight offset
+    gsap.to(flamingo1.position, {
+      x: targetPos1.x,
+      y: targetPos1.y,
+      z: targetPos1.z,
+      duration: 10,
+      ease: 'power1.in',
+      onUpdate: () => {
+        const startY = flamingo1.position.y;
+        if (startY < 5) {
+          flamingo1.position.y += 0.05;
+        }
+      },
+      onComplete: () => {
+        // Return together after being off-screen
+        setTimeout(() => {
+          this.returnTogether(flamingo1, flamingo2);
+        }, 5000);
+      }
+    });
+
+    gsap.to(flamingo2.position, {
+      x: targetPos2.x,
+      y: targetPos2.y,
+      z: targetPos2.z,
+      duration: 10,
+      ease: 'power1.in',
+      onUpdate: () => {
+        const startY = flamingo2.position.y;
+        if (startY < 5) {
+          flamingo2.position.y += 0.05;
+        }
+      }
+    });
+  }
+
+  returnTogether(flamingo1, flamingo2) {
+    // Return from opposite side, already together
+    const entryAngle = Math.random() * Math.PI * 2;
+    const startPos1 = new THREE.Vector3(
+      Math.cos(entryAngle) * 25,
+      5,
+      Math.sin(entryAngle) * 25
+    );
+    const startPos2 = new THREE.Vector3(
+      Math.cos(entryAngle) * 25 + 2,
+      5,
+      Math.sin(entryAngle) * 25 + 2
+    );
+
+    flamingo1.position.copy(startPos1);
+    flamingo2.position.copy(startPos2);
+
+    const targetPos1 = new THREE.Vector3(
+      Math.cos(entryAngle) * -5,
+      -2.0,
+      Math.sin(entryAngle) * -5
+    );
+    const targetPos2 = new THREE.Vector3(
+      Math.cos(entryAngle) * -5 + 1.5,
+      -2.0,
+      Math.sin(entryAngle) * -5 + 1.5
+    );
+
+    flamingo1.userData.state = 'flying_in_together';
+    flamingo2.userData.state = 'flying_in_together';
+
+    gsap.to(flamingo1.position, {
+      x: targetPos1.x,
+      y: targetPos1.y,
+      z: targetPos1.z,
+      duration: 8,
+      ease: 'power2.inOut',
+      onUpdate: () => {
+        const progress = gsap.getProperty(flamingo1.position, 'progress') || 0;
+        if (progress < 1) {
+          flamingo1.position.y = -2.0 + Math.sin(progress * Math.PI) * 3;
+        }
+      },
+      onComplete: () => {
+        flamingo1.userData.state = 'together';
+        flamingo1.userData.stateTimer = 20; // Stay together for a while
+        // Slow wings
+        if (flamingo1.userData.wings) {
+          flamingo1.userData.wings.forEach((wing, i) => {
+            gsap.to(wing.rotation, {
+              z: (i === 0 ? -0.3 : 0.3),
+              duration: 0.5,
+              overwrite: true
+            });
+          });
+        }
+      }
+    });
+
+    gsap.to(flamingo2.position, {
+      x: targetPos2.x,
+      y: targetPos2.y,
+      z: targetPos2.z,
+      duration: 8,
+      ease: 'power2.inOut',
+      onUpdate: () => {
+        const progress = gsap.getProperty(flamingo2.position, 'progress') || 0;
+        if (progress < 1) {
+          flamingo2.position.y = -2.0 + Math.sin(progress * Math.PI) * 3;
+        }
+      },
+      onComplete: () => {
+        flamingo2.userData.state = 'together';
+        flamingo2.userData.stateTimer = 20;
+        if (flamingo2.userData.wings) {
+          flamingo2.userData.wings.forEach((wing, i) => {
+            gsap.to(wing.rotation, {
+              z: (i === 0 ? -0.3 : 0.3),
+              duration: 0.5,
+              overwrite: true
+            });
+          });
+        }
+      }
+    });
+  }
+
+  createGardenDetails() {
+    // Add some decorative rocks
+    for (let i = 0; i < 12; i++) {
+      const rockGeo = new THREE.DodecahedronGeometry(0.2 + Math.random() * 0.3, 0);
+      const rockMat = new THREE.MeshStandardMaterial({
+        color: new THREE.Color().setHSL(0.1, 0.15, 0.25 + Math.random() * 0.15),
+        roughness: 0.95,
+        metalness: 0.05
+      });
+      const rock = new THREE.Mesh(rockGeo, rockMat);
+
+      const angle = Math.random() * Math.PI * 2;
+      const radius = 5 + Math.random() * 20;
+
+      rock.position.set(
+        Math.cos(angle) * radius,
+        -2.4 + Math.random() * 0.1,
+        Math.sin(angle) * radius
+      );
+
+      rock.rotation.set(
+        Math.random() * Math.PI,
+        Math.random() * Math.PI,
+        Math.random() * Math.PI
+      );
+
+      rock.scale.set(
+        0.8 + Math.random() * 0.4,
+        0.8 + Math.random() * 0.4,
+        0.8 + Math.random() * 0.4
+      );
+
+      this.scene.add(rock);
+    }
+
+    // Add grass patches (small clumps)
+    for (let i = 0; i < 25; i++) {
+      const count = 8 + Math.floor(Math.random() * 12);
+      const grassGroup = new THREE.Group();
+
+      for (let j = 0; j < count; j++) {
+        const bladeGeo = new THREE.PlaneGeometry(0.08, 0.3 + Math.random() * 0.2);
+        const bladeMat = new THREE.MeshStandardMaterial({
+          color: new THREE.Color().setHSL(0.3, 0.6, 0.3 + Math.random() * 0.2),
+          side: THREE.DoubleSide,
+          roughness: 0.9
+        });
+        const blade = new THREE.Mesh(bladeGeo, bladeMat);
+
+        blade.position.set(
+          (Math.random() - 0.5) * 0.4,
+          0.15,
+          (Math.random() - 0.5) * 0.4
+        );
+
+        blade.rotation.y = Math.random() * Math.PI * 2;
+        blade.rotation.z = (Math.random() - 0.5) * 0.3;
+
+        grassGroup.add(blade);
+      }
+
+      const angle = Math.random() * Math.PI * 2;
+      const radius = 3 + Math.random() * 18;
+
+      grassGroup.position.set(
+        Math.cos(angle) * radius,
+        -2.35,
+        Math.sin(angle) * radius
+      );
+
+      this.scene.add(grassGroup);
+    }
+  }
+
+  createPond() {
+    // Water surface (circular) - raised up to be clearly visible
+    const pondGeo = new THREE.CircleGeometry(3, 32);
+    const pondMat = new THREE.MeshStandardMaterial({
+      color: 0x4A9FD8,
+      transparent: true,
+      opacity: 0.9,
+      roughness: 0.15,
+      metalness: 0.5,
+      side: THREE.DoubleSide
+    });
+    const pond = new THREE.Mesh(pondGeo, pondMat);
+    pond.rotation.x = -Math.PI / 2;
+    pond.position.y = -2.1; // Raised higher to be clearly visible
+    this.scene.add(pond);
+
+    // Store for animation
+    this.pondMaterial = pondMat;
+
+    // Pond edge/rim (raised slightly)
+    const edgeGeo = new THREE.RingGeometry(3, 3.3, 32);
+    const edgeMat = new THREE.MeshStandardMaterial({
+      color: 0x6d5d47,
+      roughness: 0.95,
+      side: THREE.DoubleSide
+    });
+    const edge = new THREE.Mesh(edgeGeo, edgeMat);
+    edge.rotation.x = -Math.PI / 2;
+    edge.position.y = -2.08;
+    this.scene.add(edge);
+
+    // Goldfish (6 swimming around)
+    this.goldfish = [];
+    for (let i = 0; i < 6; i++) {
+      const fishGroup = new THREE.Group();
+
+      // Body (small ellipsoid)
+      const bodyGeo = new THREE.SphereGeometry(0.12, 8, 8);
+      bodyGeo.scale(1.5, 0.8, 0.7);
+      const bodyMat = new THREE.MeshStandardMaterial({
+        color: i % 2 === 0 ? 0xFFA500 : 0xFFD700,
+        roughness: 0.6,
+        metalness: 0.2
+      });
+      const body = new THREE.Mesh(bodyGeo, bodyMat);
+      fishGroup.add(body);
+
+      // Tail (small triangle)
+      const tailGeo = new THREE.ConeGeometry(0.08, 0.15, 4);
+      const tail = new THREE.Mesh(tailGeo, bodyMat);
+      tail.position.x = -0.15;
+      tail.rotation.z = Math.PI / 2;
+      fishGroup.add(tail);
+
+      // Random starting position in pond
+      const angle = (i / 6) * Math.PI * 2;
+      const radius = 1 + Math.random() * 1.5;
+
+      fishGroup.position.set(
+        Math.cos(angle) * radius,
+        -2.05, // Just below water surface
+        Math.sin(angle) * radius
+      );
+
+      fishGroup.userData = {
+        swimAngle: angle,
+        swimSpeed: 0.08 + Math.random() * 0.08, // Much slower, peaceful
+        swimRadius: radius
+      };
+
+      this.goldfish.push(fishGroup);
+      this.scene.add(fishGroup);
+    }
+
+    // Gentle ripples
+    gsap.to(pondMat, {
+      opacity: 0.6,
+      duration: 2,
+      yoyo: true,
+      repeat: -1,
+      ease: 'sine.inOut'
+    });
+  }
+
+  createShootingStar() {
+    // Create a streak geometry for the shooting star trail
+    const length = 3 + Math.random() * 2;
+    const points = [];
+    points.push(new THREE.Vector3(0, 0, 0));
+    points.push(new THREE.Vector3(-length, 0, 0));
+
+    const geometry = new THREE.BufferGeometry().setFromPoints(points);
+    const material = new THREE.LineBasicMaterial({
+      color: 0xffffff,
+      transparent: true,
+      opacity: 0.9,
+      linewidth: 2
+    });
+
+    const shootingStar = new THREE.Line(geometry, material);
+
+    // Random starting position in the sky
+    shootingStar.position.set(
+      (Math.random() - 0.5) * 60,
+      20 + Math.random() * 15,
+      (Math.random() - 0.5) * 60
+    );
+
+    // Random velocity (generally downward and across)
+    const speed = 15 + Math.random() * 10;
+    const angle = Math.random() * Math.PI * 2;
+    shootingStar.userData = {
+      velocity: new THREE.Vector3(
+        Math.cos(angle) * speed,
+        -(5 + Math.random() * 5),
+        Math.sin(angle) * speed
+      ),
+      life: 2.5,
+      maxLife: 2.5
+    };
+
+    // Orient the line in the direction of travel
+    shootingStar.lookAt(shootingStar.position.clone().add(shootingStar.userData.velocity));
+
+    this.shootingStars.push(shootingStar);
+    this.scene.add(shootingStar);
+  }
+
+  updateSkyAndLighting(hour) {
+    // Smoother transitions
+    const normalized = (Math.sin((hour / 24) * Math.PI * 2 - Math.PI / 2) + 1) / 2;
+
+    // Determine if dusk/dawn (golden hour)
+    const isDusk = (hour >= 17 && hour < 20) || (hour >= 5 && hour < 8);
+    const goldenBlend = isDusk ? Math.sin((hour - 17) / 3 * Math.PI) : 0;
+
+    let top, bottom;
+
+    if (isDusk && goldenBlend > 0) {
+      top = new THREE.Color().copy(this.palette.duskTop);
+      bottom = new THREE.Color().copy(this.palette.duskBottom);
+    } else {
+      top = new THREE.Color().copy(this.palette.dayTop).lerp(this.palette.nightTop, 1 - normalized);
+      bottom = new THREE.Color().copy(this.palette.dayBottom).lerp(this.palette.nightBottom, 1 - normalized);
+    }
+
+    // Draw gradient
+    const gradient = this.bgContext.createLinearGradient(0, 0, 0, 256);
+    gradient.addColorStop(0, '#' + top.getHexString());
+    gradient.addColorStop(1, '#' + bottom.getHexString());
+    this.bgContext.fillStyle = gradient;
+    this.bgContext.fillRect(0, 0, 2, 256);
+    this.bgTexture.needsUpdate = true;
+
+    // Update fog color
+    if (this.scene.fog) {
+      this.scene.fog.color.copy(bottom);
+    }
+
+    // Update lights
+    const lightIntensity = Math.max(0.4, normalized);
+    this.ambientLight.intensity = 0.4 + normalized * 0.5;
+    this.sunLight.intensity = lightIntensity * 1.2;
+    this.sunLight.color.copy(top);
+
+    // Update stars
+    if (this.stars) {
+      this.stars.material.uniforms.opacity.value = (1 - normalized) * 0.9;
+    }
+
+    // Update ground shader
+    if (this.ground) {
+      this.ground.material.uniforms.dayNightPhase.value = normalized;
+    }
+
+    // Update time display
+    const timeText = this.element?.querySelector('.current-time');
+    if (timeText) {
+      let label = 'Dawn';
+      if (hour >= 8 && hour < 17) label = 'Day';
+      else if (hour >= 17 && hour < 20) label = 'Dusk';
+      else if (hour >= 20 || hour < 5) label = 'Night';
+      else if (hour >= 5 && hour < 8) label = 'Dawn';
+      timeText.textContent = label;
+    }
+  }
+
   initAudio() {
     try {
       this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
     } catch (e) {
-      console.warn('Web Audio API not supported');
+      console.warn('Web Audio not supported');
     }
   }
 
-  /**
-   * Play growth sound
-   */
   playGrowthSound(pitch = 1) {
     if (!this.audioContext) return;
 
-    const oscillator = this.audioContext.createOscillator();
-    const gainNode = this.audioContext.createGain();
+    const osc = this.audioContext.createOscillator();
+    const gain = this.audioContext.createGain();
 
-    oscillator.connect(gainNode);
-    gainNode.connect(this.audioContext.destination);
+    osc.connect(gain);
+    gain.connect(this.audioContext.destination);
 
-    const baseFreq = 300;
-    oscillator.frequency.setValueAtTime(baseFreq * pitch, this.audioContext.currentTime);
-    oscillator.frequency.exponentialRampToValueAtTime(baseFreq * pitch * 1.5, this.audioContext.currentTime + 0.5);
+    osc.frequency.setValueAtTime(280 * pitch, this.audioContext.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(420 * pitch, this.audioContext.currentTime + 0.4);
+    osc.type = 'sine';
 
-    oscillator.type = 'sine';
+    gain.gain.setValueAtTime(0.03, this.audioContext.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.6);
 
-    gainNode.gain.setValueAtTime(0.08, this.audioContext.currentTime);
-    gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.8);
-
-    oscillator.start(this.audioContext.currentTime);
-    oscillator.stop(this.audioContext.currentTime + 0.8);
+    osc.start(this.audioContext.currentTime);
+    osc.stop(this.audioContext.currentTime + 0.6);
   }
 
-  /**
-   * Add event listeners
-   */
   addEventListeners() {
     const canvas = this.renderer.domElement;
 
     canvas.addEventListener('click', (e) => this.onCanvasClick(e));
-    canvas.addEventListener('mousemove', (e) => this.onMouseMove(e));
 
-    // Touch support
     canvas.addEventListener('touchstart', (e) => {
       e.preventDefault();
       const touch = e.touches[0];
       this.onCanvasClick({ clientX: touch.clientX, clientY: touch.clientY });
     }, { passive: false });
 
-    // Exit button
     const exitBtn = this.element.querySelector('.garden-exit-btn');
-    exitBtn.addEventListener('click', () => {
-      this.hide();
+    exitBtn.addEventListener('click', () => this.hide());
+
+    // Action button listeners
+    const actionBtns = this.element.querySelectorAll('.action-btn');
+    actionBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const action = btn.dataset.action;
+        this.setAction(action);
+
+        // Update button states
+        actionBtns.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+      });
     });
   }
 
-  /**
-   * Handle mouse move
-   */
-  onMouseMove(event) {
-    const rect = this.renderer.domElement.getBoundingClientRect();
-    this.mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-    this.mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+  setAction(action) {
+    this.selectedAction = action;
+    this.selectedPlants = []; // Clear selection when changing actions
+
+    // Update cursor
+    const canvas = this.renderer.domElement;
+    const cursors = {
+      plant: 'crosshair',
+      water: 'pointer',
+      fertilize: 'pointer',
+      harvest: 'pointer',
+      crossbreed: 'pointer'
+    };
+    canvas.style.cursor = cursors[action] || 'default';
   }
 
-  /**
-   * Handle canvas click - plant a seed
-   */
+  showInfo(message, duration = 2000, isError = false) {
+    const infoEl = this.element.querySelector('#garden-info');
+    infoEl.textContent = message;
+    infoEl.className = `garden-info ${isError ? 'error' : 'success'}`;
+    infoEl.style.opacity = '1';
+
+    setTimeout(() => {
+      infoEl.style.opacity = '0';
+    }, duration);
+  }
+
+  updateUI() {
+    // Update skill display
+    const skill = this.simulator.skill;
+    const resources = this.simulator.resources;
+
+    const skillLevelEl = this.element.querySelector('#skill-level');
+    const xpFillEl = this.element.querySelector('#xp-fill');
+    const seedsEl = this.element.querySelector('#seeds-count');
+    const waterEl = this.element.querySelector('#water-count');
+    const fertilizerEl = this.element.querySelector('#fertilizer-count');
+
+    if (skillLevelEl) skillLevelEl.textContent = skill.level;
+
+    // XP bar
+    const xpForNextLevel = 100 + (skill.level - 1) * 10;
+    const xpPercent = (skill.experience / xpForNextLevel) * 100;
+    if (xpFillEl) xpFillEl.style.width = `${xpPercent}%`;
+
+    // Resources
+    if (seedsEl) seedsEl.textContent = resources.seeds;
+    if (waterEl) waterEl.textContent = resources.water;
+    if (fertilizerEl) fertilizerEl.textContent = resources.fertilizer;
+  }
+
+  loadExistingPlants() {
+    // Load plants from simulator and create their 3D meshes
+    this.simulator.plants.forEach(plant => {
+      this.createPlantMesh(plant);
+    });
+
+    this.updateUI();
+  }
+
+  updatePlantGrowth() {
+    // Check all plants for growth stage changes
+    this.simulator.plants.forEach(plant => {
+      const mesh = this.plantMeshes.get(plant.id);
+      if (!mesh) return;
+
+      // Check if plant stage changed
+      if (mesh.userData.lastStage !== plant.stage) {
+        // Plant has grown!
+        this.onPlantGrow(plant, mesh);
+        mesh.userData.lastStage = plant.stage;
+      }
+
+      // Update scale based on stage
+      const targetScale = this.simulator.getPlantScale(plant);
+      if (mesh.scale.x !== targetScale) {
+        anime({
+          targets: mesh.scale,
+          x: targetScale,
+          y: targetScale,
+          z: targetScale,
+          duration: 2000,
+          easing: 'easeOutElastic(1, 0.5)'
+        });
+      }
+    });
+  }
+
+  onPlantGrow(plant, mesh) {
+    // Update geometry for new growth stage
+    const color = this.simulator.getPlantColor(plant);
+    this.updatePlantGeometry(mesh, plant, color);
+
+    // Growth particle effect
+    this.createGrowthParticles(mesh.position);
+
+    // Play sound
+    this.playGrowthSound(1.0 + plant.stage * 0.1);
+
+    // Show notification
+    const stageNames = ['Seed', 'Sprout', 'Small', 'Medium', 'Mature'];
+    if (plant.stage > 0) {
+      this.showInfo(`Plant grew to ${stageNames[plant.stage]}!`);
+    }
+
+    // Update UI in case we leveled up
+    this.updateUI();
+  }
+
+  createGrowthParticles(position) {
+    const count = 12;
+
+    for (let i = 0; i < count; i++) {
+      const geometry = new THREE.SphereGeometry(0.05, 6, 6);
+      const material = new THREE.MeshBasicMaterial({
+        color: 0x4CAF50,
+        transparent: true,
+        opacity: 0.9
+      });
+      const particle = new THREE.Mesh(geometry, material);
+
+      particle.position.copy(position);
+      particle.position.y += 0.2;
+
+      this.scene.add(particle);
+
+      const angle = (i / count) * Math.PI * 2;
+      const radius = 0.4 + Math.random() * 0.3;
+
+      anime({
+        targets: particle.position,
+        x: position.x + Math.cos(angle) * radius,
+        y: position.y + 0.8 + Math.random() * 0.4,
+        z: position.z + Math.sin(angle) * radius,
+        duration: 1000,
+        easing: 'easeOutQuad',
+        complete: () => {
+          this.scene.remove(particle);
+          geometry.dispose();
+          material.dispose();
+        }
+      });
+
+      anime({
+        targets: particle.material,
+        opacity: 0,
+        duration: 1000,
+        easing: 'linear'
+      });
+
+      anime({
+        targets: particle.scale,
+        x: 1.5,
+        y: 1.5,
+        z: 1.5,
+        duration: 500,
+        easing: 'easeOutQuad'
+      });
+    }
+  }
+
   onCanvasClick(event) {
     const rect = this.renderer.domElement.getBoundingClientRect();
     this.mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
     this.mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
 
-    // Calculate world position
     this.raycaster.setFromCamera(this.mouse, this.camera);
-    const groundY = -5;
-    const planeNormal = new THREE.Vector3(0, 1, 0);
-    const planePoint = new THREE.Vector3(0, groundY, 0);
-    const intersectPoint = new THREE.Vector3();
 
-    this.raycaster.ray.intersectPlane(
-      new THREE.Plane(planeNormal, -groundY),
-      intersectPoint
-    );
+    // Check if clicking on a plant
+    const plantObjects = Array.from(this.plantMeshes.values());
+    const intersects = this.raycaster.intersectObjects(plantObjects, true);
 
-    if (intersectPoint) {
-      this.plantSeed(intersectPoint);
+    if (intersects.length > 0) {
+      // Clicked on a plant
+      const clickedPlant = intersects[0].object;
+      let plantGroup = clickedPlant;
+
+      // Find the root group
+      while (plantGroup.parent && !plantGroup.userData.plantId) {
+        plantGroup = plantGroup.parent;
+      }
+
+      if (plantGroup.userData.plantId) {
+        this.handlePlantClick(plantGroup.userData.plantId);
+        return;
+      }
+    }
+
+    // If not clicking on a plant, handle ground interaction
+    if (this.selectedAction === 'plant') {
+      const groundY = -2.5;
+      const ray = this.raycaster.ray;
+      const t = (groundY - ray.origin.y) / ray.direction.y;
+
+      if (t > 0) {
+        const intersectPoint = new THREE.Vector3();
+        intersectPoint.copy(ray.origin).addScaledVector(ray.direction, t);
+
+        // Plant seed using simulator
+        const result = this.simulator.plantSeed(intersectPoint);
+
+        if (result.success) {
+          this.createPlantingBurst(intersectPoint);
+          this.playGrowthSound(0.9);
+          this.createPlantMesh(result.plant);
+          this.updateUI();
+          this.showInfo('Seed planted!');
+        } else {
+          this.showInfo(result.message, 2000, true);
+        }
+      }
     }
   }
 
-  /**
-   * Plant a seed at position
-   */
-  plantSeed(position) {
-    // Create seed
-    const geometry = new THREE.SphereGeometry(0.3, 8, 8);
-    const material = new THREE.MeshBasicMaterial({
-      color: 0x8b4513,
-      transparent: true,
-      opacity: 1
-    });
-    const seed = new THREE.Mesh(geometry, material);
-    seed.position.copy(position);
-    seed.position.y = -4.7;
+  handlePlantClick(plantId) {
+    const plant = this.simulator.plants.find(p => p.id === plantId);
+    if (!plant) return;
 
-    this.scene.add(seed);
-    this.seeds.push(seed);
+    switch (this.selectedAction) {
+      case 'water':
+        this.waterPlant(plantId);
+        break;
 
-    // Planting animation
-    gsap.fromTo(seed.scale,
-      { x: 0, y: 0, z: 0 },
-      {
-        x: 1,
-        y: 1,
-        z: 1,
-        duration: 0.3,
-        ease: 'back.out(2)',
-        onComplete: () => {
-          // Grow into flower after delay
-          setTimeout(() => {
-            this.growFlower(position, seed);
-          }, 500);
-        }
-      }
-    );
+      case 'fertilize':
+        this.fertilizePlant(plantId);
+        break;
 
-    // Play planting sound
-    this.playGrowthSound(0.8);
+      case 'harvest':
+        this.harvestPlant(plantId);
+        break;
 
-    // Particle burst
-    this.createPlantingBurst(position);
+      case 'crossbreed':
+        this.selectPlantForBreeding(plantId);
+        break;
+
+      default:
+        // Just show plant info
+        this.showPlantInfo(plant);
+        break;
+    }
   }
 
-  /**
-   * Create particle burst when planting
-   */
+  waterPlant(plantId) {
+    const result = this.simulator.waterPlant(plantId);
+
+    if (result.success) {
+      this.createWaterParticles(plantId);
+      this.playGrowthSound(1.2);
+      this.updateUI();
+      this.showInfo('Plant watered!');
+    } else {
+      this.showInfo(result.message, 2000, true);
+    }
+  }
+
+  fertilizePlant(plantId) {
+    const result = this.simulator.fertilizePlant(plantId);
+
+    if (result.success) {
+      this.createFertilizerParticles(plantId);
+      this.playGrowthSound(1.3);
+      this.updateUI();
+      this.showInfo('Plant fertilized!');
+    } else {
+      this.showInfo(result.message, 2000, true);
+    }
+  }
+
+  harvestPlant(plantId) {
+    const result = this.simulator.harvestPlant(plantId);
+
+    if (result.success) {
+      this.removePlantMesh(plantId);
+      this.playGrowthSound(1.5);
+      this.updateUI();
+      this.showInfo(result.message);
+    } else {
+      this.showInfo(result.message, 2000, true);
+    }
+  }
+
+  selectPlantForBreeding(plantId) {
+    const plant = this.simulator.plants.find(p => p.id === plantId);
+    if (!plant) return;
+
+    if (plant.stage < GrowthStages.MATURE) {
+      this.showInfo('Plant must be mature to breed!', 2000, true);
+      return;
+    }
+
+    if (this.selectedPlants.includes(plantId)) {
+      // Deselect
+      this.selectedPlants = this.selectedPlants.filter(id => id !== plantId);
+      this.updatePlantSelection(plantId, false);
+      return;
+    }
+
+    if (this.selectedPlants.length >= 2) {
+      this.showInfo('Can only select 2 plants!', 2000, true);
+      return;
+    }
+
+    this.selectedPlants.push(plantId);
+    this.updatePlantSelection(plantId, true);
+
+    if (this.selectedPlants.length === 2) {
+      // Perform crossbreeding
+      const result = this.simulator.crossBreed(this.selectedPlants[0], this.selectedPlants[1]);
+
+      if (result.success) {
+        this.createBreedingEffect(this.selectedPlants[0], this.selectedPlants[1]);
+        this.playGrowthSound(1.8);
+        this.updateUI();
+        this.showInfo(result.message);
+
+        // Clear selection
+        this.selectedPlants.forEach(id => this.updatePlantSelection(id, false));
+        this.selectedPlants = [];
+      } else {
+        this.showInfo(result.message, 2000, true);
+        this.selectedPlants.forEach(id => this.updatePlantSelection(id, false));
+        this.selectedPlants = [];
+      }
+    } else {
+      this.showInfo('Select another plant to breed...');
+    }
+  }
+
+  showPlantInfo(plant) {
+    const stageNames = ['Seed', 'Sprout', 'Small', 'Medium', 'Mature'];
+    const stageName = stageNames[plant.stage];
+    const color = plant.genetics.colors.expressed;
+    const size = plant.genetics.sizes.expressed;
+
+    this.showInfo(`${size} ${color} ${stageName}`, 3000);
+  }
+
+  updatePlantSelection(plantId, selected) {
+    const mesh = this.plantMeshes.get(plantId);
+    if (!mesh) return;
+
+    if (selected) {
+      // Add selection indicator (glow effect)
+      if (!mesh.userData.selectionGlow) {
+        const glowGeo = new THREE.SphereGeometry(1.2, 16, 16);
+        const glowMat = new THREE.MeshBasicMaterial({
+          color: 0xffff00,
+          transparent: true,
+          opacity: 0.3,
+          blending: THREE.AdditiveBlending
+        });
+        const glow = new THREE.Mesh(glowGeo, glowMat);
+        glow.scale.setScalar(1.5);
+        mesh.add(glow);
+        mesh.userData.selectionGlow = glow;
+
+        // Pulse animation
+        anime({
+          targets: glow.scale,
+          x: 1.7,
+          y: 1.7,
+          z: 1.7,
+          duration: 800,
+          easing: 'easeInOutSine',
+          direction: 'alternate',
+          loop: true
+        });
+      }
+    } else {
+      // Remove selection indicator
+      if (mesh.userData.selectionGlow) {
+        mesh.remove(mesh.userData.selectionGlow);
+        mesh.userData.selectionGlow.geometry.dispose();
+        mesh.userData.selectionGlow.material.dispose();
+        mesh.userData.selectionGlow = null;
+      }
+    }
+  }
+
   createPlantingBurst(position) {
-    const particleCount = 8;
-    for (let i = 0; i < particleCount; i++) {
-      const geometry = new THREE.SphereGeometry(0.15, 8, 8);
+    const count = 6;
+    for (let i = 0; i < count; i++) {
+      const geometry = new THREE.SphereGeometry(0.08, 8, 8);
       const material = new THREE.MeshBasicMaterial({
-        color: 0x8b4513,
+        color: 0x8b6914,
         transparent: true,
-        opacity: 1
+        opacity: 0.9
       });
       const particle = new THREE.Mesh(geometry, material);
       particle.position.copy(position);
-      particle.position.y = -4.5;
+      particle.position.y = -2.3;
 
       this.scene.add(particle);
 
-      const angle = (i / particleCount) * Math.PI * 2;
-      const distance = 1 + Math.random();
-      const targetX = position.x + Math.cos(angle) * distance;
-      const targetZ = position.z + Math.sin(angle) * distance;
+      const angle = (i / count) * Math.PI * 2;
+      const dist = 0.6 + Math.random() * 0.4;
 
       gsap.to(particle.position, {
-        x: targetX,
-        z: targetZ,
-        y: -4,
-        duration: 0.6,
+        x: position.x + Math.cos(angle) * dist,
+        z: position.z + Math.sin(angle) * dist,
+        y: -2,
+        duration: 0.4,
         ease: 'power2.out'
       });
 
       gsap.to(particle.material, {
         opacity: 0,
-        duration: 0.6,
+        duration: 0.4,
         onComplete: () => {
           this.scene.remove(particle);
           geometry.dispose();
@@ -439,588 +1673,946 @@ export class EternalGarden {
     }
   }
 
-  /**
-   * Grow a flower from seed
-   */
-  growFlower(position, seed) {
-    const flowerGroup = new THREE.Group();
-    flowerGroup.position.copy(position);
-    flowerGroup.position.y = -4.7;
+  createWaterParticles(plantId) {
+    const mesh = this.plantMeshes.get(plantId);
+    if (!mesh) return;
 
-    // Stem
-    const stemGeometry = new THREE.CylinderGeometry(0.05, 0.08, 0, 8);
-    const stemMaterial = new THREE.MeshBasicMaterial({ color: 0x228b22 });
-    const stem = new THREE.Mesh(stemGeometry, stemMaterial);
-    stem.position.y = 0;
-    flowerGroup.add(stem);
+    const position = mesh.position.clone();
+    const count = 20;
 
-    // Flower petals
-    const petalCount = 6;
-    const hue = Math.random();
-    for (let i = 0; i < petalCount; i++) {
-      const petalGeometry = new THREE.CircleGeometry(0.5, 16);
-      const petalMaterial = new THREE.MeshBasicMaterial({
-        color: new THREE.Color().setHSL(hue, 0.8, 0.6),
+    for (let i = 0; i < count; i++) {
+      const geometry = new THREE.SphereGeometry(0.06, 6, 6);
+      const material = new THREE.MeshBasicMaterial({
+        color: 0x4A9FD8,
         transparent: true,
-        opacity: 0.9,
-        side: THREE.DoubleSide
+        opacity: 0.8
       });
-      const petal = new THREE.Mesh(petalGeometry, petalMaterial);
+      const particle = new THREE.Mesh(geometry, material);
 
-      const angle = (i / petalCount) * Math.PI * 2;
-      petal.position.x = Math.cos(angle) * 0.4;
-      petal.position.z = Math.sin(angle) * 0.4;
-      petal.position.y = 0;
-      petal.rotation.x = Math.PI / 2;
+      particle.position.copy(position);
+      particle.position.y += 2 + Math.random();
 
-      flowerGroup.add(petal);
-      petal.userData.angle = angle;
+      this.scene.add(particle);
+
+      const angle = Math.random() * Math.PI * 2;
+      const radius = Math.random() * 0.5;
+
+      anime({
+        targets: particle.position,
+        x: position.x + Math.cos(angle) * radius,
+        y: position.y - 0.5,
+        z: position.z + Math.sin(angle) * radius,
+        duration: 600 + Math.random() * 400,
+        easing: 'easeInQuad',
+        complete: () => {
+          this.scene.remove(particle);
+          geometry.dispose();
+          material.dispose();
+        }
+      });
+
+      anime({
+        targets: particle.material,
+        opacity: 0,
+        duration: 600,
+        easing: 'linear'
+      });
     }
 
-    // Center
-    const centerGeometry = new THREE.CircleGeometry(0.3, 16);
-    const centerMaterial = new THREE.MeshBasicMaterial({
-      color: 0xffd700,
+    // Ripple effect
+    this.createRippleEffect(position);
+  }
+
+  createFertilizerParticles(plantId) {
+    const mesh = this.plantMeshes.get(plantId);
+    if (!mesh) return;
+
+    const position = mesh.position.clone();
+    const count = 15;
+
+    for (let i = 0; i < count; i++) {
+      const geometry = new THREE.SphereGeometry(0.05, 6, 6);
+      const material = new THREE.MeshBasicMaterial({
+        color: 0xFFD700,
+        transparent: true,
+        opacity: 0.9
+      });
+      const particle = new THREE.Mesh(geometry, material);
+
+      particle.position.copy(position);
+      particle.position.y += Math.random() * 0.5;
+
+      this.scene.add(particle);
+
+      const angle = Math.random() * Math.PI * 2;
+      const radius = 0.3 + Math.random() * 0.4;
+
+      anime({
+        targets: particle.position,
+        x: position.x + Math.cos(angle) * radius,
+        y: position.y + 1 + Math.random() * 0.5,
+        z: position.z + Math.sin(angle) * radius,
+        duration: 800 + Math.random() * 400,
+        easing: 'easeOutQuad',
+        complete: () => {
+          // Sparkle at the end
+          anime({
+            targets: particle.scale,
+            x: 2,
+            y: 2,
+            z: 2,
+            duration: 200,
+            easing: 'easeOutQuad',
+            complete: () => {
+              this.scene.remove(particle);
+              geometry.dispose();
+              material.dispose();
+            }
+          });
+        }
+      });
+
+      anime({
+        targets: particle.material,
+        opacity: 0,
+        duration: 1000,
+        delay: 200,
+        easing: 'linear'
+      });
+    }
+  }
+
+  createRippleEffect(position) {
+    const rippleGeo = new THREE.RingGeometry(0.1, 0.2, 32);
+    const rippleMat = new THREE.MeshBasicMaterial({
+      color: 0x4A9FD8,
+      transparent: true,
+      opacity: 0.6,
       side: THREE.DoubleSide
     });
-    const center = new THREE.Mesh(centerGeometry, centerMaterial);
-    center.rotation.x = -Math.PI / 2;
-    center.position.y = 0.1;
-    flowerGroup.add(center);
+    const ripple = new THREE.Mesh(rippleGeo, rippleMat);
+    ripple.position.copy(position);
+    ripple.position.y = -2.4;
+    ripple.rotation.x = -Math.PI / 2;
 
-    this.scene.add(flowerGroup);
-    this.flowers.push(flowerGroup);
+    this.scene.add(ripple);
 
-    // Remove seed
-    gsap.to(seed.material, {
+    anime({
+      targets: ripple.scale,
+      x: 5,
+      y: 5,
+      z: 5,
+      duration: 1000,
+      easing: 'easeOutQuad'
+    });
+
+    anime({
+      targets: rippleMat,
       opacity: 0,
-      duration: 0.5,
-      onComplete: () => {
-        this.scene.remove(seed);
-        seed.geometry.dispose();
-        seed.material.dispose();
+      duration: 1000,
+      easing: 'linear',
+      complete: () => {
+        this.scene.remove(ripple);
+        rippleGeo.dispose();
+        rippleMat.dispose();
       }
     });
+  }
 
-    // Slow, peaceful growth animation
-    gsap.fromTo(stemGeometry.parameters,
-      { height: 0 },
-      {
-        height: 4,
-        duration: 4,
-        ease: 'power1.inOut',
-        onUpdate: () => {
-          stemGeometry.dispose();
-          const newStem = new THREE.CylinderGeometry(0.05, 0.08, stemGeometry.parameters.height, 8);
-          stem.geometry = newStem;
-          flowerGroup.position.y = -4.7 + stemGeometry.parameters.height / 2;
+  createBreedingEffect(plantId1, plantId2) {
+    const mesh1 = this.plantMeshes.get(plantId1);
+    const mesh2 = this.plantMeshes.get(plantId2);
+    if (!mesh1 || !mesh2) return;
+
+    const pos1 = mesh1.position.clone();
+    const pos2 = mesh2.position.clone();
+    const midpoint = new THREE.Vector3().lerpVectors(pos1, pos2, 0.5);
+    midpoint.y += 2;
+
+    // Create heart particles
+    const count = 10;
+    for (let i = 0; i < count; i++) {
+      const geometry = new THREE.SphereGeometry(0.1, 8, 8);
+      const material = new THREE.MeshBasicMaterial({
+        color: 0xFF69B4,
+        transparent: true,
+        opacity: 0.9
+      });
+      const particle = new THREE.Mesh(geometry, material);
+
+      particle.position.copy(midpoint);
+
+      this.scene.add(particle);
+
+      const angle = (i / count) * Math.PI * 2;
+      const radius = 1;
+
+      anime({
+        targets: particle.position,
+        x: midpoint.x + Math.cos(angle) * radius,
+        y: midpoint.y + 1,
+        z: midpoint.z + Math.sin(angle) * radius,
+        duration: 1000,
+        easing: 'easeOutQuad',
+        complete: () => {
+          this.scene.remove(particle);
+          geometry.dispose();
+          material.dispose();
         }
-      }
-    );
+      });
 
-    // Petals bloom slowly after stem grows
-    flowerGroup.children.slice(1).forEach((petal, i) => {
-      petal.scale.set(0, 0, 0);
-      gsap.to(petal.scale,
-        {
-          x: 1,
-          y: 1,
-          z: 1,
-          duration: 1,
-          delay: 1 + (i * 0.1),
-          ease: 'back.out(2)'
-        }
-      );
-    });
+      anime({
+        targets: particle.material,
+        opacity: 0,
+        duration: 1000,
+        easing: 'linear'
+      });
+    }
+  }
 
-    // Play growth sound
-    setTimeout(() => this.playGrowthSound(1 + hue), 1000);
+  createPlantMesh(plant) {
+    const plantGroup = new THREE.Group();
+    plantGroup.position.copy(plant.position);
+    plantGroup.position.y = -2.3;
+    plantGroup.userData.plantId = plant.id;
+
+    // Get color from genetics
+    const color = this.simulator.getPlantColor(plant);
+    const scale = this.simulator.getPlantScale(plant);
+
+    // Create plant based on stage
+    this.updatePlantGeometry(plantGroup, plant, color);
+
+    // Initial scale based on stage
+    plantGroup.scale.setScalar(scale);
+
+    this.scene.add(plantGroup);
+    this.plantMeshes.set(plant.id, plantGroup);
+
+    // Grow animation when first created
+    if (plant.stage === GrowthStages.SEED) {
+      plantGroup.scale.setScalar(0);
+      anime({
+        targets: plantGroup.scale,
+        x: scale,
+        y: scale,
+        z: scale,
+        duration: 1000,
+        easing: 'easeOutElastic(1, 0.5)'
+      });
+    }
 
     // Gentle sway animation
-    gsap.to(flowerGroup.rotation, {
-      z: (Math.random() - 0.5) * 0.2,
-      duration: 2 + Math.random() * 2,
-      yoyo: true,
-      repeat: -1,
-      ease: 'sine.inOut'
+    anime({
+      targets: plantGroup.rotation,
+      z: (Math.random() - 0.5) * 0.1,
+      duration: 2000 + Math.random() * 2000,
+      direction: 'alternate',
+      loop: true,
+      easing: 'easeInOutSine'
     });
 
-    // Count bloom
-    this.bloomCount++;
-    this.updateProgress();
+    return plantGroup;
+  }
 
-    // Flamingos fly in halfway through (after 6 flowers)
-    if (this.bloomCount === 6 && !this.flamingosArrived) {
-      this.flamingosArrived = true;
-      setTimeout(() => {
-        this.flamingosFlyIn();
-      }, 1000);
+  updatePlantGeometry(plantGroup, plant, color) {
+    // Clear existing geometry
+    while (plantGroup.children.length > 0) {
+      const child = plantGroup.children[0];
+      plantGroup.remove(child);
+      if (child.geometry) child.geometry.dispose();
+      if (child.material) {
+        if (Array.isArray(child.material)) {
+          child.material.forEach(m => m.dispose());
+        } else {
+          child.material.dispose();
+        }
+      }
     }
 
-    if (this.bloomCount >= this.targetBlooms) {
-      setTimeout(() => {
-        this.complete();
-      }, 2000);
+    const threeColor = new THREE.Color(color);
+
+    // Create geometry based on stage
+    switch (plant.stage) {
+      case GrowthStages.SEED:
+        // Small brown sphere
+        const seedGeo = new THREE.SphereGeometry(0.1, 8, 8);
+        const seedMat = new THREE.MeshStandardMaterial({
+          color: 0x8b6914,
+          roughness: 0.9
+        });
+        const seed = new THREE.Mesh(seedGeo, seedMat);
+        seed.position.y = 0.05;
+        plantGroup.add(seed);
+        break;
+
+      case GrowthStages.SPROUT:
+        // Small green sprout
+        const sproutGeo = new THREE.ConeGeometry(0.05, 0.3, 6);
+        const sproutMat = new THREE.MeshStandardMaterial({
+          color: 0x4CAF50,
+          roughness: 0.8
+        });
+        const sprout = new THREE.Mesh(sproutGeo, sproutMat);
+        sprout.position.y = 0.15;
+        plantGroup.add(sprout);
+        break;
+
+      case GrowthStages.SMALL:
+        // Small flower bud
+        const budGeo = new THREE.SphereGeometry(0.15, 12, 12);
+        const budMat = new THREE.MeshStandardMaterial({
+          color: threeColor,
+          roughness: 0.7,
+          metalness: 0.1
+        });
+        const bud = new THREE.Mesh(budGeo, budMat);
+        bud.position.y = 0.3;
+        plantGroup.add(bud);
+
+        // Stem
+        const stemGeo = new THREE.CylinderGeometry(0.03, 0.03, 0.3, 6);
+        const stemMat = new THREE.MeshStandardMaterial({
+          color: 0x4CAF50,
+          roughness: 0.8
+        });
+        const stem = new THREE.Mesh(stemGeo, stemMat);
+        stem.position.y = 0.15;
+        plantGroup.add(stem);
+        break;
+
+      case GrowthStages.MEDIUM:
+        // Growing flower with petals forming
+        const petalCount = 5;
+        for (let i = 0; i < petalCount; i++) {
+          const angle = (i / petalCount) * Math.PI * 2;
+          const petalGeo = new THREE.SphereGeometry(0.2, 12, 12);
+          petalGeo.scale(1.3, 0.3, 0.6);
+
+          const petalMat = new THREE.MeshStandardMaterial({
+            color: threeColor,
+            transparent: true,
+            opacity: 0.85,
+            roughness: 0.7,
+            metalness: 0.1,
+            side: THREE.DoubleSide
+          });
+
+          const petal = new THREE.Mesh(petalGeo, petalMat);
+          petal.position.x = Math.cos(angle) * 0.25;
+          petal.position.z = Math.sin(angle) * 0.25;
+          petal.position.y = 0.5;
+          petal.rotation.y = -angle;
+          petal.rotation.x = Math.PI / 6;
+
+          plantGroup.add(petal);
+        }
+
+        // Center
+        const centerGeo = new THREE.SphereGeometry(0.12, 12, 12);
+        const centerMat = new THREE.MeshStandardMaterial({
+          color: 0xffd700,
+          roughness: 0.4,
+          metalness: 0.2
+        });
+        const center = new THREE.Mesh(centerGeo, centerMat);
+        center.position.y = 0.5;
+        plantGroup.add(center);
+
+        // Longer stem
+        const stemGeo2 = new THREE.CylinderGeometry(0.04, 0.04, 0.5, 6);
+        const stemMat2 = new THREE.MeshStandardMaterial({
+          color: 0x4CAF50,
+          roughness: 0.8
+        });
+        const stem2 = new THREE.Mesh(stemGeo2, stemMat2);
+        stem2.position.y = 0.25;
+        plantGroup.add(stem2);
+        break;
+
+      case GrowthStages.MATURE:
+        // Full flower with glow
+        const maturePetalCount = 6;
+        for (let i = 0; i < maturePetalCount; i++) {
+          const angle = (i / maturePetalCount) * Math.PI * 2;
+          const petalGeo = new THREE.SphereGeometry(0.25, 16, 16);
+          petalGeo.scale(1.5, 0.3, 0.8);
+
+          const petalMat = new THREE.MeshStandardMaterial({
+            color: threeColor,
+            transparent: true,
+            opacity: 0.85,
+            roughness: 0.7,
+            metalness: 0.1,
+            side: THREE.DoubleSide,
+            emissive: threeColor,
+            emissiveIntensity: 0.2
+          });
+
+          const petal = new THREE.Mesh(petalGeo, petalMat);
+          petal.position.x = Math.cos(angle) * 0.35;
+          petal.position.z = Math.sin(angle) * 0.35;
+          petal.position.y = 0.6;
+          petal.rotation.y = -angle;
+          petal.rotation.x = Math.PI / 6;
+
+          plantGroup.add(petal);
+        }
+
+        // Bright center
+        const matureCenterGeo = new THREE.SphereGeometry(0.15, 16, 16);
+        const matureCenterMat = new THREE.MeshStandardMaterial({
+          color: 0xffd700,
+          roughness: 0.4,
+          metalness: 0.2,
+          emissive: 0xffd700,
+          emissiveIntensity: 0.5
+        });
+        const matureCenter = new THREE.Mesh(matureCenterGeo, matureCenterMat);
+        matureCenter.position.y = 0.65;
+        plantGroup.add(matureCenter);
+
+        // Glow effect
+        const glowGeo = new THREE.SphereGeometry(0.7, 16, 16);
+        const glowMat = new THREE.MeshBasicMaterial({
+          color: threeColor,
+          transparent: true,
+          opacity: 0.3,
+          blending: THREE.AdditiveBlending
+        });
+        const glow = new THREE.Mesh(glowGeo, glowMat);
+        glow.position.y = 0.6;
+        plantGroup.add(glow);
+        plantGroup.userData.glow = glow;
+
+        // Pulsing glow animation
+        anime({
+          targets: glowMat,
+          opacity: 0.5,
+          duration: 2000,
+          direction: 'alternate',
+          loop: true,
+          easing: 'easeInOutSine'
+        });
+
+        // Full stem
+        const stemGeo3 = new THREE.CylinderGeometry(0.05, 0.05, 0.6, 8);
+        const stemMat3 = new THREE.MeshStandardMaterial({
+          color: 0x4CAF50,
+          roughness: 0.8
+        });
+        const stem3 = new THREE.Mesh(stemGeo3, stemMat3);
+        stem3.position.y = 0.3;
+        plantGroup.add(stem3);
+
+        // Leaves
+        for (let i = 0; i < 2; i++) {
+          const leafGeo = new THREE.SphereGeometry(0.15, 12, 12);
+          leafGeo.scale(2, 0.1, 1);
+          const leafMat = new THREE.MeshStandardMaterial({
+            color: 0x4CAF50,
+            roughness: 0.8,
+            side: THREE.DoubleSide
+          });
+          const leaf = new THREE.Mesh(leafGeo, leafMat);
+          leaf.position.y = 0.2 + i * 0.15;
+          leaf.position.x = (i % 2 === 0 ? 0.2 : -0.2);
+          leaf.rotation.z = (i % 2 === 0 ? -0.5 : 0.5);
+          plantGroup.add(leaf);
+        }
+        break;
     }
   }
 
-  /**
-   * Update progress display
-   */
-  updateProgress() {
-    const progressText = this.element?.querySelector('.progress-text');
-    if (!progressText) return;
+  removePlantMesh(plantId) {
+    const mesh = this.plantMeshes.get(plantId);
+    if (!mesh) return;
 
-    progressText.textContent = `${this.bloomCount} of ${this.targetBlooms} flowers blooming`;
+    // Harvest animation
+    anime({
+      targets: mesh.scale,
+      x: 0,
+      y: 0,
+      z: 0,
+      duration: 500,
+      easing: 'easeInBack',
+      complete: () => {
+        this.scene.remove(mesh);
 
-    // Animate text with proper transform
-    gsap.fromTo(progressText,
-      {
-        transform: 'scale(1.2)',
-        color: '#88ee88'
-      },
-      {
-        transform: 'scale(1)',
-        color: '',
-        duration: 0.5,
-        ease: 'back.out(2)'
-      }
-    );
-  }
-
-  /**
-   * Complete the puzzle
-   */
-  async complete() {
-    if (this.isComplete) return;
-    this.isComplete = true;
-
-    // All flowers glow
-    this.flowers.forEach(flower => {
-      flower.children.forEach(child => {
-        if (child.material) {
-          gsap.to(child.material, {
-            emissive: new THREE.Color(0xffffff),
-            emissiveIntensity: 0.5,
-            duration: 2
-          });
-        }
-      });
-    });
-
-    // Wait a moment for user to appreciate the garden
-    await new Promise(resolve => setTimeout(resolve, 2000));
-
-    // Show final message
-    await this.showFinalMessage();
-
-    setTimeout(() => {
-      if (this.onComplete) {
-        this.onComplete();
-      }
-      this.hide();
-    }, 8000);
-  }
-
-  /**
-   * Create beautiful SVG flamingo (from loading screen)
-   */
-  createFlamingoElement() {
-    const bird = document.createElement('div');
-    bird.className = 'garden-flamingo';
-    bird.innerHTML = `
-      <svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
-        <!-- Body -->
-        <ellipse cx="60" cy="60" rx="18" ry="25" fill="#FF6B9D" opacity="0.95"/>
-
-        <!-- Neck -->
-        <path d="M 60 40 Q 55 25, 45 20" stroke="#FF6B9D" stroke-width="6" fill="none" stroke-linecap="round"/>
-
-        <!-- Head -->
-        <ellipse cx="43" cy="18" rx="7" ry="8" fill="#FF6B9D"/>
-
-        <!-- Beak -->
-        <path d="M 40 18 L 32 18 L 36 20 Z" fill="#1a1a1a"/>
-
-        <!-- Eye -->
-        <circle cx="45" cy="17" r="1.5" fill="#1a1a1a"/>
-
-        <!-- Left Wing (flapping) -->
-        <ellipse class="wing" cx="50" cy="55" rx="25" ry="12" fill="#FFB6C1" opacity="0.9"
-                 transform="rotate(-30 50 55)"/>
-
-        <!-- Right Wing (flapping) -->
-        <ellipse class="wing" cx="70" cy="55" rx="25" ry="12" fill="#FF8FAB" opacity="0.9"
-                 transform="rotate(30 70 55)"/>
-
-        <!-- Legs -->
-        <line x1="55" y1="80" x2="52" y2="105" stroke="#FF6B9D" stroke-width="3" stroke-linecap="round"/>
-        <line x1="65" y1="80" x2="68" y2="105" stroke="#FF6B9D" stroke-width="3" stroke-linecap="round"/>
-
-        <!-- Tail feathers -->
-        <path d="M 60 75 Q 58 85, 55 90" stroke="#FFB6C1" stroke-width="4" fill="none" stroke-linecap="round"/>
-        <path d="M 60 75 Q 62 85, 65 90" stroke="#FF8FAB" stroke-width="4" fill="none" stroke-linecap="round"/>
-      </svg>
-    `;
-    return bird;
-  }
-
-  /**
-   * Flamingos fly in to rest in the garden
-   */
-  async flamingosFlyIn() {
-    return new Promise((resolve) => {
-      const container = this.element.querySelector('.garden-canvas-container');
-      if (!container) {
-        resolve();
-        return;
-      }
-
-      // Create two flamingos
-      const flamingo1 = this.createFlamingoElement();
-      const flamingo2 = this.createFlamingoElement();
-
-      container.appendChild(flamingo1);
-      container.appendChild(flamingo2);
-
-      const centerX = container.clientWidth / 2;
-      const centerY = container.clientHeight / 2;
-      const flamingoScale = window.innerWidth < 768 ? 0.8 : 1.2;
-
-      // Flamingo 1 - starts from left
-      gsap.set(flamingo1, {
-        x: -150,
-        y: centerY - 100,
-        opacity: 0,
-        transformOrigin: 'center center'
-      });
-      flamingo1.style.transform = `scale(${flamingoScale}) rotate(45deg)`;
-
-      // Flamingo 2 - starts from right
-      gsap.set(flamingo2, {
-        x: container.clientWidth + 150,
-        y: centerY - 100,
-        opacity: 0,
-        transformOrigin: 'center center'
-      });
-      flamingo2.style.transform = `scale(${flamingoScale}) rotate(-45deg)`;
-
-      // Animation timeline
-      const tl = gsap.timeline();
-
-      // Flamingo 1 flies in first
-      tl.to(flamingo1, {
-        opacity: 1,
-        duration: 0.5,
-        onUpdate: function() {
-          const progress = this.progress();
-          if (progress > 0) {
-            const currentRotation = 45 - (50 * progress);
-            flamingo1.style.transform = `scale(${flamingoScale}) rotate(${currentRotation}deg)`;
+        // Dispose of all geometries and materials
+        mesh.traverse(child => {
+          if (child.geometry) child.geometry.dispose();
+          if (child.material) {
+            if (Array.isArray(child.material)) {
+              child.material.forEach(m => m.dispose());
+            } else {
+              child.material.dispose();
+            }
           }
-        }
-      })
-      .to(flamingo1, {
-        x: centerX - 80,
-        y: centerY + 20,
-        duration: 2.5,
-        ease: 'power2.inOut',
-        onUpdate: function() {
-          flamingo1.style.transform = `scale(${flamingoScale}) rotate(-5deg)`;
-        }
-      })
+        });
 
-      // Flamingo 2 joins after a delay
-      .to(flamingo2, {
-        opacity: 1,
-        duration: 0.5,
-        onUpdate: function() {
-          const progress = this.progress();
-          if (progress > 0) {
-            const currentRotation = -45 + (50 * progress);
-            flamingo2.style.transform = `scale(${flamingoScale}) rotate(${currentRotation}deg)`;
-          }
-        }
-      }, 1.5)
-      .to(flamingo2, {
-        x: centerX + 80,
-        y: centerY + 20,
-        duration: 2.5,
-        ease: 'power2.inOut',
-        onUpdate: function() {
-          flamingo2.style.transform = `scale(${flamingoScale}) rotate(5deg)`;
-        }
-      }, 1.5)
+        this.plantMeshes.delete(plantId);
+      }
+    });
 
-      // Both rest together
-      .to({}, { duration: 3 })
+    // Create harvest sparkles
+    const position = mesh.position.clone();
+    const count = 15;
 
-      // Fly away together upward
-      .to([flamingo1, flamingo2], {
-        x: centerX,
-        y: -200,
-        duration: 2.5,
-        ease: 'power2.in',
-        onUpdate: function() {
-          const progress = this.progress();
-          const currentScale = flamingoScale - (flamingoScale * 0.6 * progress);
-          flamingo1.style.transform = `scale(${currentScale}) rotate(0deg)`;
-          flamingo2.style.transform = `scale(${currentScale}) rotate(0deg)`;
-        }
-      })
+    for (let i = 0; i < count; i++) {
+      const geometry = new THREE.SphereGeometry(0.08, 8, 8);
+      const material = new THREE.MeshBasicMaterial({
+        color: 0xFFD700,
+        transparent: true,
+        opacity: 1
+      });
+      const particle = new THREE.Mesh(geometry, material);
 
-      // Wait before returning
-      .to({}, { duration: 4 })
+      particle.position.copy(position);
+      particle.position.y += 0.5;
 
-      // Return together from above
-      .set([flamingo1, flamingo2], {
-        y: -200,
-        x: centerX,
-        onComplete: () => {
-          flamingo1.style.transform = `scale(${flamingoScale * 0.4}) rotate(0deg)`;
-          flamingo2.style.transform = `scale(${flamingoScale * 0.4}) rotate(0deg)`;
-        }
-      })
-      .to([flamingo1, flamingo2], {
-        opacity: 1,
-        duration: 0.5
-      })
-      .to(flamingo1, {
-        x: centerX - 60,
-        y: centerY + 40,
-        duration: 2.5,
-        ease: 'power2.inOut',
-        onUpdate: function() {
-          const progress = this.progress();
-          const currentScale = (flamingoScale * 0.4) + ((flamingoScale * 0.6) * progress);
-          flamingo1.style.transform = `scale(${currentScale}) rotate(-5deg)`;
-        }
-      })
-      .to(flamingo2, {
-        x: centerX + 60,
-        y: centerY + 40,
-        duration: 2.5,
-        ease: 'power2.inOut',
-        onUpdate: function() {
-          const progress = this.progress();
-          const currentScale = (flamingoScale * 0.4) + ((flamingoScale * 0.6) * progress);
-          flamingo2.style.transform = `scale(${currentScale}) rotate(5deg)`;
-        }
-      }, '<')
+      this.scene.add(particle);
 
-      // Rest next to each other
-      .to({}, {
-        duration: 1,
-        onComplete: () => {
-          // Wing flapping animation
-          const wings1 = flamingo1.querySelectorAll('.wing');
-          const wings2 = flamingo2.querySelectorAll('.wing');
+      const angle = Math.random() * Math.PI * 2;
+      const radius = 0.5 + Math.random() * 0.5;
 
-          gsap.to([...wings1, ...wings2], {
-            scaleY: 0.6,
-            transformOrigin: 'center center',
-            duration: 0.15,
-            repeat: -1,
-            yoyo: true,
-            ease: 'sine.inOut'
-          });
-
-          resolve();
+      anime({
+        targets: particle.position,
+        x: position.x + Math.cos(angle) * radius,
+        y: position.y + 1 + Math.random() * 0.5,
+        z: position.z + Math.sin(angle) * radius,
+        duration: 800,
+        easing: 'easeOutQuad',
+        complete: () => {
+          this.scene.remove(particle);
+          geometry.dispose();
+          material.dispose();
         }
       });
-    });
+
+      anime({
+        targets: particle.material,
+        opacity: 0,
+        duration: 800,
+        easing: 'linear'
+      });
+    }
   }
 
-  // Keep old 3D implementation as backup
-  async flamingosFlyIn_OLD_3D() {
-    return new Promise((resolve) => {
-      const flamingos = [];
-      const flamingoCount = 3;
+  // Show a poem line
+  showPoem(text) {
+    const poemEl = document.createElement('div');
+    poemEl.className = 'garden-poem';
+    poemEl.textContent = text;
+    this.element.appendChild(poemEl);
 
-      for (let i = 0; i < flamingoCount; i++) {
-        const flamingoGroup = new THREE.Group();
-
-        // Body
-        const bodyGeometry = new THREE.SphereGeometry(0.8, 16, 16);
-        bodyGeometry.scale(1, 0.8, 1.2);
-        const bodyMaterial = new THREE.MeshBasicMaterial({ color: 0xFFB6C1 });
-        const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
-        flamingoGroup.add(body);
-
-        // Neck
-        const neckGeometry = new THREE.CylinderGeometry(0.15, 0.2, 1.5, 8);
-        const neckMaterial = new THREE.MeshBasicMaterial({ color: 0xFFB6C1 });
-        const neck = new THREE.Mesh(neckGeometry, neckMaterial);
-        neck.position.set(0.3, 0.8, 0);
-        neck.rotation.z = 0.3;
-        flamingoGroup.add(neck);
-
-        // Head
-        const headGeometry = new THREE.SphereGeometry(0.3, 16, 16);
-        const headMaterial = new THREE.MeshBasicMaterial({ color: 0xFFB6C1 });
-        const head = new THREE.Mesh(headGeometry, headMaterial);
-        head.position.set(0.8, 1.5, 0);
-        flamingoGroup.add(head);
-
-        // Beak
-        const beakGeometry = new THREE.ConeGeometry(0.1, 0.4, 8);
-        const beakMaterial = new THREE.MeshBasicMaterial({ color: 0x000000 });
-        const beak = new THREE.Mesh(beakGeometry, beakMaterial);
-        beak.position.set(1.0, 1.5, 0);
-        beak.rotation.z = -Math.PI / 2;
-        flamingoGroup.add(beak);
-
-        // Wings
-        const wingGeometry = new THREE.SphereGeometry(0.6, 16, 16);
-        wingGeometry.scale(1.5, 0.3, 0.8);
-        const wingMaterial = new THREE.MeshBasicMaterial({ color: 0xFF99AA });
-
-        const leftWing = new THREE.Mesh(wingGeometry, wingMaterial);
-        leftWing.position.set(-0.2, 0.2, 0.8);
-        flamingoGroup.add(leftWing);
-
-        const rightWing = new THREE.Mesh(wingGeometry, wingMaterial);
-        rightWing.position.set(-0.2, 0.2, -0.8);
-        flamingoGroup.add(rightWing);
-
-        // Start position (off screen, flying from different directions)
-        const startAngles = [-60, 0, 60];
-        const angle = (startAngles[i] * Math.PI) / 180;
-        flamingoGroup.position.set(
-          Math.cos(angle) * 30,
-          8 + i * 2,
-          Math.sin(angle) * 30
-        );
-        flamingoGroup.rotation.y = -angle;
-
-        this.scene.add(flamingoGroup);
-        flamingos.push({ group: flamingoGroup, leftWing, rightWing });
-
-        // Wing flapping animation
-        gsap.to(leftWing.rotation, {
-          z: 0.8,
-          duration: 0.3,
-          yoyo: true,
-          repeat: -1,
-          ease: 'sine.inOut'
-        });
-
-        gsap.to(rightWing.rotation, {
-          z: -0.8,
-          duration: 0.3,
-          yoyo: true,
-          repeat: -1,
-          ease: 'sine.inOut'
-        });
-
-        // Landing position (among the flowers)
-        const landX = (i - 1) * 4;
-        const landZ = -5 + i * 2;
-
-        // Fly in gracefully
-        gsap.to(flamingoGroup.position, {
-          x: landX,
-          y: -2,
-          z: landZ,
-          duration: 3 + i * 0.5,
-          delay: i * 0.4,
-          ease: 'power1.inOut'
-        });
-
-        gsap.to(flamingoGroup.rotation, {
-          y: 0,
-          duration: 3 + i * 0.5,
-          delay: i * 0.4,
-          ease: 'power1.inOut'
-        });
-
-        // Gentle resting animation after landing
-        setTimeout(() => {
-          // Slow down wings to resting position
-          gsap.killTweensOf([leftWing.rotation, rightWing.rotation]);
-          gsap.to([leftWing.rotation, rightWing.rotation], {
-            z: 0,
-            duration: 1,
-            ease: 'power2.out'
-          });
-
-          // Gentle idle sway
-          gsap.to(flamingoGroup.rotation, {
-            z: (Math.random() - 0.5) * 0.1,
-            duration: 2,
-            yoyo: true,
-            repeat: -1,
-            ease: 'sine.inOut'
-          });
-        }, (3 + i * 0.5 + i * 0.4) * 1000);
-      }
-
-      // Resolve after all flamingos land
-      setTimeout(() => {
-        resolve();
-      }, 5000);
-    });
-  }
-
-  /**
-   * Show final message
-   */
-  async showFinalMessage() {
-    const finalEl = document.createElement('div');
-    finalEl.className = 'garden-final';
-    finalEl.innerHTML = `
-      <div class="final-text">
-        You planted something that will keep growing,<br>
-        long after this moment passes.<br>
-        <br>
-        Some gardens bloom forever—<br>
-        tended by attention,<br>
-        watered by intention,<br>
-        growing in the space between two people<br>
-        who chose to create something beautiful together.
-      </div>
-      <div class="final-signature">— The End, and The Beginning</div>
-    `;
-
-    this.element.appendChild(finalEl);
-
-    gsap.fromTo(finalEl,
-      { opacity: 0, scale: 0.9 },
+    // Fade in
+    gsap.fromTo(poemEl,
+      { opacity: 0, y: -20 },
       {
         opacity: 1,
-        scale: 1,
+        y: 0,
         duration: 2,
         ease: 'power2.out'
       }
     );
+
+    // Fade out after a few seconds
+    setTimeout(() => {
+      gsap.to(poemEl, {
+        opacity: 0,
+        y: 20,
+        duration: 2,
+        ease: 'power2.in',
+        onComplete: () => poemEl.remove()
+      });
+    }, 5000);
   }
 
-  /**
-   * Animation loop
-   */
-  animate() {
-    // Stop animation if flag is false or renderer is gone
-    if (!this.isAnimating || !this.renderer) return;
+  // Reward given on exit only
+  complete() {
+    if (this.isComplete) return;
+    this.isComplete = true;
 
+    if (this.onComplete) {
+      this.onComplete();
+    }
+  }
+
+  animate() {
+    if (!this.isAnimating || !this.renderer) return;
     requestAnimationFrame(() => this.animate());
 
-    this.time += 0.01;
+    const tNow = performance.now() / 1000;
+    const dt = Math.min(0.05, tNow - this.lastTime);
+    this.lastTime = tNow;
+    this.realTime += dt;
 
-    // Update ground shader uniform
-    if (this.ground && this.ground.material.uniforms) {
-      this.ground.material.uniforms.time.value = this.time;
+    // Update game time
+    this.gameTime = (this.gameTime + dt * this.timeScale) % 24;
+    this.updateSkyAndLighting(this.gameTime);
+
+    // Update simulator (plant growth)
+    this.simulator.update(dt);
+    this.updatePlantGrowth();
+
+    // Update ground shader
+    if (this.ground) {
+      this.ground.material.uniforms.time.value = this.realTime;
+    }
+
+    // Update stars
+    if (this.stars) {
+      this.stars.material.uniforms.time.value = this.realTime;
+      this.stars.rotation.y += 0.0001;
+    }
+
+    // Animate atmospheric particles
+    if (this.atmosphericParticleSystem) {
+      const posArray = this.atmosphericParticleSystem.geometry.attributes.position.array;
+      const velArray = this.atmosphericParticleSystem.geometry.attributes.velocity.array;
+
+      for (let i = 0; i < posArray.length / 3; i++) {
+        const idx = i * 3;
+
+        // Apply velocity
+        posArray[idx] += velArray[idx];
+        posArray[idx + 1] += velArray[idx + 1];
+        posArray[idx + 2] += velArray[idx + 2];
+
+        // Wrap around
+        if (posArray[idx + 1] > 15) {
+          posArray[idx + 1] = 0;
+        }
+        if (Math.abs(posArray[idx]) > 20) {
+          posArray[idx] = -posArray[idx];
+        }
+        if (Math.abs(posArray[idx + 2]) > 20) {
+          posArray[idx + 2] = -posArray[idx + 2];
+        }
+      }
+
+      this.atmosphericParticleSystem.geometry.attributes.position.needsUpdate = true;
+      this.atmosphericParticleSystem.material.uniforms.time.value = this.realTime;
+
+      // Update day/night phase for atmospheric particles
+      const normalized = (Math.sin((this.gameTime / 24) * Math.PI * 2 - Math.PI / 2) + 1) / 2;
+      this.atmosphericParticleSystem.material.uniforms.dayNightPhase.value = normalized;
+    }
+
+    // Animate butterflies
+    this.butterflies.forEach(butterfly => {
+      const userData = butterfly.userData;
+
+      // Circular flight pattern
+      userData.flyAngle += dt * userData.flySpeed;
+
+      butterfly.position.x = Math.cos(userData.flyAngle) * userData.flyRadius;
+      butterfly.position.z = Math.sin(userData.flyAngle) * userData.flyRadius;
+
+      // Bob up and down
+      userData.bobPhase += dt * 2;
+      butterfly.position.y = 2.5 + Math.sin(userData.bobPhase) * 0.5;
+
+      // Face direction of movement
+      butterfly.rotation.y = -userData.flyAngle + Math.PI / 2;
+
+      // Flap wings
+      if (userData.wings) {
+        userData.wingPhase += dt * 10;
+        const flapAngle = Math.sin(userData.wingPhase) * 0.5;
+
+        userData.wings[0].rotation.y = Math.PI * 0.3 + flapAngle;
+        userData.wings[1].rotation.y = -Math.PI * 0.3 - flapAngle;
+      }
+    });
+
+    // Animate fireflies
+    if (this.fireflySystem) {
+      const posArray = this.fireflySystem.geometry.attributes.position.array;
+      const speedArray = this.fireflySystem.geometry.attributes.speed.array;
+      for (let i = 0; i < speedArray.length; i++) {
+        posArray[i * 3] += Math.sin(this.realTime * speedArray[i]) * 0.002;
+        posArray[i * 3 + 1] += Math.cos(this.realTime * speedArray[i] * 0.7) * 0.003;
+      }
+      this.fireflySystem.geometry.attributes.position.needsUpdate = true;
+    }
+
+    // Animate mist
+    if (this.mist) {
+      this.mist.rotation.y += 0.0002;
+    }
+
+    // Create shooting stars occasionally (during night/dusk)
+    if (this.gameTime >= 18 || this.gameTime <= 6) {
+      if (tNow - this.lastShootingStar > 8 + Math.random() * 12) {
+        this.createShootingStar();
+        this.lastShootingStar = tNow;
+      }
+    }
+
+    // Animate existing shooting stars
+    for (let i = this.shootingStars.length - 1; i >= 0; i--) {
+      const star = this.shootingStars[i];
+      star.position.x += star.userData.velocity.x * dt;
+      star.position.y += star.userData.velocity.y * dt;
+      star.position.z += star.userData.velocity.z * dt;
+
+      star.userData.life -= dt;
+      if (star.userData.life <= 0) {
+        this.scene.remove(star);
+        if (star.geometry) star.geometry.dispose();
+        if (star.material) star.material.dispose();
+        this.shootingStars.splice(i, 1);
+      } else {
+        // Fade out
+        star.material.opacity = star.userData.life / star.userData.maxLife;
+      }
     }
 
     // Gentle camera sway
-    this.camera.position.x = Math.sin(this.time * 0.1) * 3;
+    this.camera.position.x = Math.sin(this.realTime * 0.06) * 1.5;
     this.camera.lookAt(0, 0, 0);
+
+    // Flamingo love story animation - state machine
+    this.flamingos.forEach((flamingo, index) => {
+      const userData = flamingo.userData;
+      const partner = userData.partner;
+      const isNight = this.gameTime >= 20 || this.gameTime < 5;
+
+      // Update state timer
+      if (userData.stateTimer > 0) {
+        userData.stateTimer -= dt;
+      }
+
+      // State machine
+      switch (userData.state) {
+        case 'waiting':
+          // Flamingo 2 waits before flying in
+          if (userData.stateTimer <= 0) {
+            this.flyInFlamingo(flamingo, new THREE.Vector3(8, -2.0, 6));
+          }
+          break;
+
+        case 'flying_in':
+        case 'flying_in_together':
+        case 'flying_away':
+          // Handled by GSAP animations
+          // Just rotate to face movement direction
+          const velocity = new THREE.Vector3().subVectors(
+            flamingo.position,
+            userData.lastPosition || flamingo.position
+          );
+          if (velocity.length() > 0.01) {
+            const targetAngle = Math.atan2(velocity.x, velocity.z);
+            flamingo.rotation.y = targetAngle;
+          }
+          userData.lastPosition = flamingo.position.clone();
+          break;
+
+        case 'wandering_solo':
+          // Wander alone, waiting to meet
+          userData.turnTimer -= dt;
+          if (userData.turnTimer <= 0) {
+            userData.walkDirection = new THREE.Vector3(
+              Math.random() - 0.5,
+              0,
+              Math.random() - 0.5
+            ).normalize();
+            userData.turnTimer = 3 + Math.random() * 4;
+          }
+
+          // Walk
+          flamingo.position.x += userData.walkDirection.x * userData.walkSpeed;
+          flamingo.position.z += userData.walkDirection.z * userData.walkSpeed;
+
+          // Keep within bounds
+          const distSolo = Math.sqrt(flamingo.position.x ** 2 + flamingo.position.z ** 2);
+          if (distSolo > 12) {
+            userData.walkDirection = new THREE.Vector3(
+              -flamingo.position.x,
+              0,
+              -flamingo.position.z
+            ).normalize();
+          }
+
+          // Look in walking direction
+          flamingo.rotation.y = Math.atan2(userData.walkDirection.x, userData.walkDirection.z);
+
+          // Bob while walking
+          userData.bobPhase += dt * 2;
+          flamingo.position.y = -2.0 + Math.sin(userData.bobPhase) * 0.03;
+
+          // Check if time to meet (both need to be wandering_solo)
+          if (userData.stateTimer <= 0 && partner && partner.userData.state === 'wandering_solo') {
+            this.startMeeting(flamingo, partner);
+          }
+          break;
+
+        case 'meeting':
+          // Walk towards meeting point
+          if (userData.meetingPoint) {
+            const toMeeting = new THREE.Vector3().subVectors(
+              userData.meetingPoint,
+              flamingo.position
+            );
+            const distToMeeting = toMeeting.length();
+
+            if (distToMeeting > 0.5) {
+              // Still walking to meeting point
+              toMeeting.normalize();
+              flamingo.position.x += toMeeting.x * userData.walkSpeed;
+              flamingo.position.z += toMeeting.z * userData.walkSpeed;
+              flamingo.rotation.y = Math.atan2(toMeeting.x, toMeeting.z);
+
+              // Bob while walking
+              userData.bobPhase += dt * 2;
+              flamingo.position.y = -2.0 + Math.sin(userData.bobPhase) * 0.03;
+            } else {
+              // Reached meeting point - wait for partner
+              if (partner && partner.userData.state === 'meeting') {
+                const partnerDist = new THREE.Vector3().subVectors(
+                  userData.meetingPoint,
+                  partner.position
+                ).length();
+
+                if (partnerDist < 0.5) {
+                  // Both at meeting point - fly away together!
+                  if (userData.id === 1) { // Only trigger once
+                    this.flyAwayTogether(flamingo, partner);
+                  }
+                }
+              }
+            }
+          }
+          break;
+
+        case 'together':
+          // Walk together, staying close
+          if (partner && partner.userData.state === 'together') {
+            // Follow partner with slight offset
+            const offset = userData.id === 1 ? -1.5 : 1.5;
+            const targetPos = new THREE.Vector3(
+              partner.position.x + offset,
+              -2.0,
+              partner.position.z
+            );
+
+            if (userData.id === 1) {
+              // Leader - random walking
+              userData.turnTimer -= dt;
+              if (userData.turnTimer <= 0) {
+                userData.walkDirection = new THREE.Vector3(
+                  Math.random() - 0.5,
+                  0,
+                  Math.random() - 0.5
+                ).normalize();
+                userData.turnTimer = 3 + Math.random() * 4;
+              }
+
+              flamingo.position.x += userData.walkDirection.x * userData.walkSpeed;
+              flamingo.position.z += userData.walkDirection.z * userData.walkSpeed;
+
+              // Keep within bounds
+              const distTogether = Math.sqrt(flamingo.position.x ** 2 + flamingo.position.z ** 2);
+              if (distTogether > 12) {
+                userData.walkDirection = new THREE.Vector3(
+                  -flamingo.position.x,
+                  0,
+                  -flamingo.position.z
+                ).normalize();
+              }
+
+              flamingo.rotation.y = Math.atan2(userData.walkDirection.x, userData.walkDirection.z);
+            } else {
+              // Follower - follow partner
+              const toPartner = new THREE.Vector3().subVectors(targetPos, flamingo.position);
+              if (toPartner.length() > 0.5) {
+                toPartner.normalize();
+                flamingo.position.x += toPartner.x * userData.walkSpeed;
+                flamingo.position.z += toPartner.z * userData.walkSpeed;
+                flamingo.rotation.y = Math.atan2(toPartner.x, toPartner.z);
+              }
+            }
+
+            // Bob while walking
+            userData.bobPhase += dt * 2;
+            flamingo.position.y = -2.0 + Math.sin(userData.bobPhase) * 0.03;
+          }
+
+          // Check if night - go to sleep
+          if (isNight && !userData.sleeping) {
+            userData.sleeping = true;
+            userData.state = 'sleeping';
+            // Move to sleep position near pond
+            gsap.to(flamingo.position, {
+              x: userData.sleepPosition.x,
+              y: userData.sleepPosition.y,
+              z: userData.sleepPosition.z,
+              duration: 3,
+              ease: 'power2.inOut'
+            });
+          }
+          break;
+
+        case 'sleeping':
+          // Sleep near pond, minimal movement
+          // Stand on one leg (shift position slightly)
+          flamingo.position.y = userData.sleepPosition.y + Math.sin(this.realTime * 0.3) * 0.01;
+
+          // Tuck head (rotate slightly)
+          if (!userData.sleepRotation) {
+            userData.sleepRotation = flamingo.rotation.y;
+            gsap.to(flamingo.rotation, {
+              y: userData.sleepRotation + 0.5,
+              duration: 2,
+              ease: 'power2.inOut'
+            });
+          }
+
+          // Wake up at dawn
+          if (!isNight && userData.sleeping) {
+            userData.sleeping = false;
+            userData.state = 'together';
+            userData.sleepRotation = null;
+            gsap.to(flamingo.rotation, {
+              y: 0,
+              duration: 2,
+              ease: 'power2.out'
+            });
+          }
+          break;
+      }
+
+      // Subtle wing animation (walking pace)
+      if (userData.wings && (userData.state === 'wandering_solo' || userData.state === 'meeting' || userData.state === 'together')) {
+        userData.wings.forEach((wing, i) => {
+          const baseRotation = (i === 0 ? -0.3 : 0.3);
+          wing.rotation.z = baseRotation + Math.sin(this.realTime * 1.5 + i * Math.PI) * 0.05;
+        });
+      }
+    });
+
+    // Animate goldfish swimming slowly in circles
+    this.goldfish.forEach(fish => {
+      const userData = fish.userData;
+
+      // Swim in gentle circles (very slow)
+      userData.swimAngle += dt * userData.swimSpeed;
+
+      fish.position.x = Math.cos(userData.swimAngle) * userData.swimRadius;
+      fish.position.z = Math.sin(userData.swimAngle) * userData.swimRadius;
+
+      // Look in swimming direction
+      fish.rotation.y = -userData.swimAngle + Math.PI / 2;
+
+      // Gentle up/down motion in water
+      fish.position.y = -2.05 + Math.sin(this.realTime * 1.5 + userData.swimAngle) * 0.03;
+    });
 
     this.renderer.render(this.scene, this.camera);
   }
 
-  /**
-   * Handle window resize
-   */
   onResize() {
     if (!this.renderer) return;
 
@@ -1033,30 +2625,33 @@ export class EternalGarden {
     this.renderer.setSize(width, height);
   }
 
-  /**
-   * Hide the puzzle
-   */
   hide() {
-    // Stop animation loop FIRST to prevent rendering errors
+    // Give reward when she leaves
+    if (this.onComplete) {
+      this.onComplete();
+    }
+
     this.isAnimating = false;
 
     gsap.to(this.element, {
       opacity: 0,
-      duration: 1.5,
+      duration: 1,
       ease: 'power2.in',
       onComplete: () => {
         if (this.element && this.element.parentNode) {
           this.element.remove();
         }
 
-        // Cleanup THREE.js resources
         if (this.renderer) {
           this.renderer.dispose();
           this.scene.traverse(obj => {
             if (obj.geometry) obj.geometry.dispose();
             if (obj.material) {
-              if (obj.material.map) obj.material.map.dispose();
-              obj.material.dispose();
+              if (Array.isArray(obj.material)) {
+                obj.material.forEach(m => m.dispose());
+              } else {
+                obj.material.dispose();
+              }
             }
           });
           this.renderer = null;
@@ -1080,16 +2675,16 @@ const styles = `
   width: 100%;
   height: 100%;
   z-index: 1000;
-  background: radial-gradient(circle at 50% 50%, #2d1f3d 0%, #0a1628 100%);
+  background: #0a0a0a;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .garden-container {
-  width: 90%;
-  max-width: 1200px;
-  height: 90vh;
+  width: 100%;
+  height: 100vh;
+  height: 100dvh;
   display: flex;
   flex-direction: column;
   position: relative;
@@ -1097,13 +2692,13 @@ const styles = `
 
 .garden-exit-btn {
   position: absolute;
-  top: -3rem;
-  right: 0;
-  width: 44px;
-  height: 44px;
-  background: rgba(0, 0, 0, 0.5);
+  top: 1rem;
+  right: 1rem;
+  width: 48px;
+  height: 48px;
+  background: rgba(0, 0, 0, 0.6);
   backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 2px solid rgba(255, 255, 255, 0.3);
   border-radius: 50%;
   cursor: pointer;
   display: flex;
@@ -1111,194 +2706,334 @@ const styles = `
   justify-content: center;
   transition: all 0.3s ease;
   z-index: 100;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
 .garden-exit-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: var(--color-highlight, #FFB6C1);
-  transform: scale(1.1) rotate(90deg);
+  background: rgba(255, 255, 255, 0.15);
+  border-color: #FFB6C1;
+  transform: scale(1.15) rotate(90deg);
+}
+
+.garden-exit-btn:active {
+  transform: scale(1.05) rotate(90deg);
 }
 
 .garden-exit-btn .exit-icon {
-  font-size: 1.5rem;
-  color: var(--color-primary, #FFF8F0);
-  font-weight: 300;
-  transition: color 0.3s ease;
-}
-
-.garden-exit-btn:hover .exit-icon {
-  color: var(--color-highlight, #FFB6C1);
-}
-
-.garden-header {
-  text-align: center;
-  margin-bottom: 1.5rem;
+  font-size: 1.6rem;
+  color: #FFF8F0;
+  font-weight: 400;
 }
 
 .garden-canvas-container {
   flex: 1;
-  border-radius: 16px;
-  overflow: hidden;
-  border: 2px solid rgba(136, 238, 136, 0.3);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), inset 0 0 60px rgba(136, 238, 136, 0.1);
   position: relative;
-  cursor: crosshair;
+  touch-action: none;
 }
 
-.garden-flamingo {
+.garden-time-indicator {
   position: absolute;
-  width: 100px;
-  height: 100px;
+  top: 1rem;
+  left: 1rem;
+  padding: 0.5rem 1rem;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(10px);
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
   pointer-events: none;
-  z-index: 100;
-  filter: drop-shadow(0 6px 12px rgba(255, 107, 157, 0.5));
+  z-index: 50;
 }
 
-.garden-flamingo svg {
-  width: 100%;
+.current-time {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 300;
+  color: rgba(255, 255, 255, 0.9);
+  letter-spacing: 0.5px;
+}
+
+/* Resources Panel */
+.garden-resources-panel {
+  position: absolute;
+  top: 1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 1.25rem;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(15px);
+  border-radius: 30px;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+  z-index: 50;
+}
+
+.skill-display {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding-right: 1rem;
+  border-right: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.skill-icon {
+  font-size: 1.5rem;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+}
+
+.skill-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.skill-level {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #fff;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.xp-bar {
+  width: 80px;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.xp-fill {
   height: 100%;
+  background: linear-gradient(90deg, #4CAF50, #8BC34A);
+  border-radius: 3px;
+  transition: width 0.5s ease;
+  box-shadow: 0 0 8px rgba(76, 175, 80, 0.6);
 }
 
-.garden-progress {
-  margin-top: 1.5rem;
+.resources {
+  display: flex;
+  gap: 1rem;
+}
+
+.resource {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.resource-icon {
+  font-size: 1.2rem;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+}
+
+.resource-value {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #fff;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  min-width: 24px;
   text-align: center;
 }
 
-.progress-text {
-  font-family: 'Montserrat', sans-serif;
-  font-size: 1rem;
-  color: var(--color-secondary, #FFE4E1);
-}
-
-.garden-hint {
+/* Action Buttons */
+.garden-actions {
   position: absolute;
   bottom: 2rem;
   left: 50%;
   transform: translateX(-50%);
   display: flex;
-  align-items: center;
   gap: 0.75rem;
-  padding: 1rem 1.5rem;
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(10px);
-  border-radius: 50px;
-  border: 1px solid rgba(136, 238, 136, 0.3);
+  padding: 0.75rem;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(15px);
+  border-radius: 40px;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+  z-index: 50;
 }
 
-.hint-icon {
-  font-size: 1.25rem;
-  animation: grow-pulse 2s ease-in-out infinite;
+.action-btn {
+  width: 56px;
+  height: 56px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  position: relative;
 }
 
-@keyframes grow-pulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.2); }
+.action-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.5);
+  transform: scale(1.1);
 }
 
-.hint-text {
-  font-family: 'Montserrat', sans-serif;
-  font-size: 0.9rem;
-  color: rgba(255, 255, 255, 0.9);
+.action-btn:active {
+  transform: scale(0.95);
 }
 
-.garden-final {
+.action-btn.active {
+  background: rgba(76, 175, 80, 0.4);
+  border-color: rgba(76, 175, 80, 0.8);
+  box-shadow: 0 0 20px rgba(76, 175, 80, 0.6);
+}
+
+.action-btn.active::after {
+  content: '';
   position: absolute;
-  top: 50%;
+  inset: -4px;
+  border: 2px solid rgba(76, 175, 80, 0.6);
+  border-radius: 50%;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(1.05);
+  }
+}
+
+.action-icon {
+  font-size: 1.8rem;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+}
+
+/* Info Display */
+.garden-info {
+  position: absolute;
+  bottom: 8rem;
   left: 50%;
-  transform: translate(-50%, -50%);
-  text-align: center;
-  padding: 3rem;
-  background: rgba(0, 0, 0, 0.9);
-  backdrop-filter: blur(20px);
-  border-radius: 24px;
-  border: 2px solid rgba(136, 238, 136, 0.6);
-  box-shadow: 0 0 60px rgba(136, 238, 136, 0.3);
-  max-width: 700px;
-  max-height: 85vh;
-  max-height: 85dvh;
-  overflow-y: auto;
-  z-index: 10;
-}
-
-.final-text {
-  font-family: 'Cormorant Garamond', serif;
-  font-size: 1.4rem;
-  font-weight: 400;
-  line-height: 1.8;
-  color: var(--color-primary, #FFF8F0);
-  margin-bottom: 2rem;
-}
-
-.final-signature {
+  transform: translateX(-50%);
+  padding: 0.75rem 1.5rem;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(15px);
+  border-radius: 25px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
   font-family: 'Montserrat', sans-serif;
-  font-size: 1.1rem;
-  font-weight: 300;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: #fff;
+  text-align: center;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+  z-index: 50;
+  max-width: 300px;
+}
+
+.garden-info.success {
+  border-color: rgba(76, 175, 80, 0.6);
+  background: rgba(76, 175, 80, 0.2);
+  box-shadow: 0 0 20px rgba(76, 175, 80, 0.4);
+}
+
+.garden-info.error {
+  border-color: rgba(244, 67, 54, 0.6);
+  background: rgba(244, 67, 54, 0.2);
+  box-shadow: 0 0 20px rgba(244, 67, 54, 0.4);
+}
+
+.garden-poem {
+  position: absolute;
+  top: 30%;
+  left: 50%;
+  transform: translateX(-50%);
+  text-align: center;
+  padding: 1.5rem 2rem;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(20px);
+  border-radius: 20px;
+  border: 1px solid rgba(255, 182, 193, 0.4);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+  max-width: 500px;
+  z-index: 50;
+  pointer-events: none;
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.2rem;
+  font-weight: 400;
   font-style: italic;
-  color: var(--color-highlight, #FFB6C1);
+  line-height: 1.6;
+  color: rgba(255, 243, 230, 0.95);
+  text-shadow: 0 2px 10px rgba(255, 182, 193, 0.3);
 }
 
 @media (max-width: 768px) {
-  .garden-container {
-    width: 95%;
-    height: 95vh;
-  }
-
   .garden-exit-btn {
-    top: -2.5rem;
     width: 40px;
     height: 40px;
   }
 
-  .garden-exit-btn .exit-icon {
-    font-size: 1.25rem;
+  .garden-time-indicator {
+    padding: 0.4rem 0.8rem;
   }
 
-  .garden-hint {
-    bottom: 1rem;
-    padding: 0.75rem 1.25rem;
-  }
-
-  .hint-text {
-    font-size: 0.8rem;
-  }
-
-  .garden-final {
-    padding: 2rem 1.5rem;
-    max-width: 90%;
-  }
-
-  .final-text {
-    font-size: 1.2rem;
-  }
-
-  .final-signature {
-    font-size: 1rem;
-  }
-}
-
-@media (max-width: 480px) {
-  .garden-hint {
-    flex-direction: column;
-    gap: 0.5rem;
-  }
-
-  .hint-text {
+  .current-time {
     font-size: 0.75rem;
   }
 
-  .garden-final {
-    padding: 1.5rem 1rem;
-    max-width: 95%;
+  .garden-resources-panel {
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    top: 3.5rem;
+    left: 1rem;
+    transform: none;
   }
 
-  .final-text {
-    font-size: 1.1rem;
-    line-height: 1.6;
+  .skill-display {
+    padding-right: 0;
+    padding-bottom: 0.5rem;
+    border-right: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  }
+
+  .resources {
+    gap: 0.75rem;
+  }
+
+  .garden-actions {
+    gap: 0.5rem;
+    padding: 0.5rem;
+    bottom: 1rem;
+  }
+
+  .action-btn {
+    width: 48px;
+    height: 48px;
+  }
+
+  .action-icon {
+    font-size: 1.5rem;
+  }
+
+  .garden-info {
+    bottom: 6rem;
+    max-width: 85%;
+    font-size: 0.85rem;
+  }
+
+  .garden-poem {
+    padding: 1.2rem 1.5rem;
+    max-width: 85%;
+    font-size: 1rem;
   }
 }
 `;
 
-// Inject styles
 const styleSheet = document.createElement('style');
 styleSheet.textContent = styles;
 document.head.appendChild(styleSheet);
