@@ -1049,6 +1049,8 @@ class MilasWorld {
                 if (this.discoveryContainer) {
                   this.hiddenExperiences = remainingHidden;
                   this.currentDiscoveryWanderingStopped = false;
+                  // Clear the reference to allow new star creation
+                  this.currentDiscoveryElement = null;
                   this.createWanderingDiscoveryElement();
                 } else {
                   // Container doesn't exist, create it fresh
@@ -1104,6 +1106,8 @@ class MilasWorld {
             if (this.discoveryContainer) {
               this.hiddenExperiences = remaining;
               this.currentDiscoveryWanderingStopped = false;
+              // Clear the reference to allow new star creation
+              this.currentDiscoveryElement = null;
               this.createWanderingDiscoveryElement();
             } else {
               // Container doesn't exist, create it fresh

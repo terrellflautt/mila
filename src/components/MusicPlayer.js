@@ -694,6 +694,8 @@ export class MusicPlayer {
         box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8), 0 0 40px rgba(255, 182, 193, 0.3);
         z-index: 10000;
         overflow: hidden;
+        display: flex;
+        flex-direction: column;
       }
 
       .tracklist-header, .request-header {
@@ -809,6 +811,9 @@ export class MusicPlayer {
       /* Song Request Form */
       .request-content {
         padding: 20px;
+        overflow-y: auto;
+        flex: 1;
+        min-height: 0;
       }
 
       .song-request-form {
@@ -941,7 +946,13 @@ export class MusicPlayer {
 
         .player-tracklist-modal, .player-request-modal {
           width: 95%;
-          max-height: 80vh;
+          max-height: 60vh;
+          top: 40%;
+        }
+
+        .request-content {
+          padding: 16px;
+          max-height: calc(60vh - 80px);
         }
 
         .player-btn-full {
