@@ -1,0 +1,28 @@
+{
+  "name": "eternal-garden-mcp",
+  "version": "1.0.0",
+  "description": "MCP server for Mila's Eternal Garden - managing plants, genetics, seasons, and memories",
+  "main": "dist/index.js",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "start": "node dist/index.js",
+    "inspector": "npx @modelcontextprotocol/inspector dist/index.js"
+  },
+  "keywords": [
+    "mcp",
+    "garden",
+    "genetics",
+    "ai"
+  ],
+  "author": "Tyler",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^0.6.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.6.0"
+  }
+}

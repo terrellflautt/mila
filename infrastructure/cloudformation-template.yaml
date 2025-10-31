@@ -56,6 +56,52 @@ Resources:
             Action: 's3:GetObject'
             Resource: !Sub '${WebsiteBucket.Arn}/*'
 
+  # S3 Bucket for gallery photos
+  GalleryPhotoBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub '${DomainName}-gallery'
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: false
+        BlockPublicPolicy: false
+        IgnorePublicAcls: false
+        RestrictPublicBuckets: false
+      CorsConfiguration:
+        CorsRules:
+          - AllowedOrigins:
+              - '*'
+            AllowedMethods:
+              - GET
+              - PUT
+              - POST
+              - HEAD
+            AllowedHeaders:
+              - '*'
+            MaxAge: 3600
+      LifecycleConfiguration:
+        Rules:
+          - Id: DeleteOldVersions
+            Status: Enabled
+            NoncurrentVersionExpirationInDays: 30
+      Tags:
+        - Key: Project
+          Value: MilasWorld
+        - Key: Purpose
+          Value: GalleryPhotos
+
+  # Gallery Bucket Policy - Public read access
+  GalleryPhotoBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref GalleryPhotoBucket
+      PolicyDocument:
+        Statement:
+          - Sid: PublicReadGetObject
+            Effect: Allow
+            Principal: '*'
+            Action: 's3:GetObject'
+            Resource: !Sub '${GalleryPhotoBucket.Arn}/*'
+
   # CloudFront Origin Access Identity
   CloudFrontOAI:
     Type: AWS::CloudFront::CloudFrontOriginAccessIdentity
@@ -137,6 +183,29 @@ Resources:
         - Key: Environment
           Value: Production
 
+  # DynamoDB Table for storing gallery photos
+  GalleryPhotosTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: MilasWorld-GalleryPhotos
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: userId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: userId
+          KeyType: HASH
+      SSESpecification:
+        SSEEnabled: true
+        SSEType: KMS
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      Tags:
+        - Key: Project
+          Value: MilasWorld
+        - Key: Environment
+          Value: Production
+
   # Lambda Execution Role
   LambdaExecutionRole:
     Type: AWS::IAM::Role
@@ -162,7 +231,22 @@ Resources:
                   - 'dynamodb:GetItem'
                   - 'dynamodb:UpdateItem'
                   - 'dynamodb:Query'
-                Resource: !GetAtt AnswersTable.Arn
+                Resource:
+                  - !GetAtt AnswersTable.Arn
+                  - !GetAtt GalleryPhotosTable.Arn
+        - PolicyName: S3GalleryAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 's3:PutObject'
+                  - 's3:GetObject'
+                  - 's3:DeleteObject'
+                  - 's3:ListBucket'
+                Resource:
+                  - !Sub '${GalleryPhotoBucket.Arn}/*'
+                  - !GetAtt GalleryPhotoBucket.Arn
 
   # Lambda Function
   AnswerHandlerFunction:

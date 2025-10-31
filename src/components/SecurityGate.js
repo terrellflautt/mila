@@ -303,148 +303,89 @@ export class SecurityGate {
     // Create the animation timeline
     const tl = gsap.timeline();
 
-    // Phase 1: Fade in
+    // Phase 1: Fade in and fly in from opposite sides
     tl.to([flamingo1, flamingo2], {
       opacity: 1,
-      duration: 0.5,
+      duration: 0.3,
       ease: 'power2.out'
     })
 
-    // Phase 2: Fly in towards center (slow and graceful)
+    // Phase 2: Fly in towards center (graceful entrance)
     .to(flamingo1, {
-      x: centerX - 120,
-      y: centerY - 80,
-      rotation: -15,
-      duration: 3,
-      ease: 'power2.inOut'
-    }, 0.5)
+      x: centerX - 150,
+      y: centerY - 60,
+      rotation: 0,
+      duration: 2.5,
+      ease: 'power2.out'
+    }, 0.3)
     .to(flamingo2, {
-      x: centerX + 120,
-      y: centerY - 80,
-      rotation: 15,
-      duration: 3,
-      ease: 'power2.inOut'
-    }, 0.5)
+      x: centerX + 150,
+      y: centerY - 60,
+      rotation: 0,
+      duration: 2.5,
+      ease: 'power2.out'
+    }, 0.3)
 
-    // Phase 3: Circle together (5 complete circles - extended for loading)
+    // Phase 3: Fly around each other (one graceful loop)
     .to(flamingo1, {
       motionPath: {
         path: [
-          // Circle 1
-          { x: centerX - 120, y: centerY - 80 },
-          { x: centerX - 80, y: centerY - 150 },
-          { x: centerX + 80, y: centerY - 150 },
-          { x: centerX + 120, y: centerY - 80 },
-          { x: centerX + 80, y: centerY - 10 },
-          { x: centerX - 80, y: centerY - 10 },
-          // Circle 2
-          { x: centerX - 120, y: centerY - 80 },
-          { x: centerX - 80, y: centerY - 150 },
-          { x: centerX + 80, y: centerY - 150 },
-          { x: centerX + 120, y: centerY - 80 },
-          { x: centerX + 80, y: centerY - 10 },
-          { x: centerX - 80, y: centerY - 10 },
-          // Circle 3
-          { x: centerX - 120, y: centerY - 80 },
-          { x: centerX - 80, y: centerY - 150 },
-          { x: centerX + 80, y: centerY - 150 },
-          { x: centerX + 120, y: centerY - 80 },
-          { x: centerX + 80, y: centerY - 10 },
-          { x: centerX - 80, y: centerY - 10 },
-          // Circle 4
-          { x: centerX - 120, y: centerY - 80 },
-          { x: centerX - 80, y: centerY - 150 },
-          { x: centerX + 80, y: centerY - 150 },
-          { x: centerX + 120, y: centerY - 80 },
-          { x: centerX + 80, y: centerY - 10 },
-          { x: centerX - 80, y: centerY - 10 },
-          // Circle 5
-          { x: centerX - 120, y: centerY - 80 },
-          { x: centerX - 80, y: centerY - 150 },
-          { x: centerX + 80, y: centerY - 150 },
-          { x: centerX + 120, y: centerY - 80 },
-          { x: centerX + 80, y: centerY - 10 },
-          { x: centerX - 80, y: centerY - 10 },
-          { x: centerX - 120, y: centerY - 80 }
+          { x: centerX - 150, y: centerY - 60 },
+          { x: centerX - 100, y: centerY - 120 },
+          { x: centerX, y: centerY - 140 },
+          { x: centerX + 100, y: centerY - 120 },
+          { x: centerX + 150, y: centerY - 60 },
+          { x: centerX + 100, y: centerY },
+          { x: centerX, y: centerY + 20 },
+          { x: centerX - 50, y: centerY }
         ],
         autoRotate: true
       },
-      duration: 10,
-      ease: 'none'
-    }, 3.5)
+      duration: 4,
+      ease: 'power1.inOut'
+    }, 2.8)
     .to(flamingo2, {
       motionPath: {
         path: [
-          // Circle 1
-          { x: centerX + 120, y: centerY - 80 },
-          { x: centerX + 80, y: centerY - 10 },
-          { x: centerX - 80, y: centerY - 10 },
-          { x: centerX - 120, y: centerY - 80 },
-          { x: centerX - 80, y: centerY - 150 },
-          { x: centerX + 80, y: centerY - 150 },
-          // Circle 2
-          { x: centerX + 120, y: centerY - 80 },
-          { x: centerX + 80, y: centerY - 10 },
-          { x: centerX - 80, y: centerY - 10 },
-          { x: centerX - 120, y: centerY - 80 },
-          { x: centerX - 80, y: centerY - 150 },
-          { x: centerX + 80, y: centerY - 150 },
-          // Circle 3
-          { x: centerX + 120, y: centerY - 80 },
-          { x: centerX + 80, y: centerY - 10 },
-          { x: centerX - 80, y: centerY - 10 },
-          { x: centerX - 120, y: centerY - 80 },
-          { x: centerX - 80, y: centerY - 150 },
-          { x: centerX + 80, y: centerY - 150 },
-          // Circle 4
-          { x: centerX + 120, y: centerY - 80 },
-          { x: centerX + 80, y: centerY - 10 },
-          { x: centerX - 80, y: centerY - 10 },
-          { x: centerX - 120, y: centerY - 80 },
-          { x: centerX - 80, y: centerY - 150 },
-          { x: centerX + 80, y: centerY - 150 },
-          // Circle 5
-          { x: centerX + 120, y: centerY - 80 },
-          { x: centerX + 80, y: centerY - 10 },
-          { x: centerX - 80, y: centerY - 10 },
-          { x: centerX - 120, y: centerY - 80 },
-          { x: centerX - 80, y: centerY - 150 },
-          { x: centerX + 80, y: centerY - 150 },
-          { x: centerX + 120, y: centerY - 80 }
+          { x: centerX + 150, y: centerY - 60 },
+          { x: centerX + 100, y: centerY },
+          { x: centerX, y: centerY + 20 },
+          { x: centerX - 100, y: centerY },
+          { x: centerX - 150, y: centerY - 60 },
+          { x: centerX - 100, y: centerY - 120 },
+          { x: centerX, y: centerY - 140 },
+          { x: centerX + 50, y: centerY - 120 }
         ],
         autoRotate: true
       },
-      duration: 10,
-      ease: 'none'
-    }, 3.5)
+      duration: 4,
+      ease: 'power1.inOut'
+    }, 2.8)
 
-    // Phase 4: Come together in center
+    // Phase 4: Align side-by-side
     .to(flamingo1, {
-      x: centerX - 60,
+      x: centerX - 80,
       y: centerY - 80,
-      rotation: -5,
-      duration: 1.5,
+      rotation: 45,
+      duration: 1,
       ease: 'power2.inOut'
     })
     .to(flamingo2, {
-      x: centerX + 60,
+      x: centerX + 80,
       y: centerY - 80,
-      rotation: 5,
-      duration: 1.5,
+      rotation: 45,
+      duration: 1,
       ease: 'power2.inOut'
     }, '<')
 
-    // Phase 5: Brief pause together
-    .to({}, { duration: 0.8 })
-
-    // Phase 6: Fly away together upward
+    // Phase 5: Fly away together (same direction - upper right)
     .to([flamingo1, flamingo2], {
-      x: centerX,
+      x: window.innerWidth + 300,
       y: -300,
-      scale: flamingoScale * 0.5,
-      rotation: 0,
+      scale: flamingoScale * 0.6,
+      rotation: 45,
       duration: 3,
-      ease: 'power2.in',
+      ease: 'power1.in',
       onComplete: () => {
         flamingo1.remove();
         flamingo2.remove();

@@ -10,6 +10,7 @@
     "deploy": "npm run build && aws s3 sync dist/ s3://milas-world-692859945539 --delete && aws cloudfront create-invalidation --distribution-id E3U8AGSSIVAVRH --paths '/*'"
   },
   "dependencies": {
+    "animejs": "^4.2.2",
     "canvas-confetti": "^1.9.2",
     "gsap": "^3.12.4",
     "lenis": "^1.1.0",
@@ -18,6 +19,7 @@
   "devDependencies": {
     "@types/three": "^0.160.0",
     "sass": "^1.69.7",
+    "sharp": "^0.34.4",
     "terser": "^5.44.0",
     "vite": "^5.0.11"
   }

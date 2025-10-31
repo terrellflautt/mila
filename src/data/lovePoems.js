@@ -26,8 +26,7 @@ And you sit wondering
 what you're gonna do.
 I got it.
 Come. And be my baby.`,
-      story: 'This is the first poem you ever sent to Mila. Against a backdrop of chaos — big cars going nowhere, apocalyptic prophecies, newspaper horrors — Maya Angelou offers the simple, powerful refuge of love. When the world feels overwhelming and uncertain, the speaker says "I got it. Come. And be my baby." It\'s an invitation to intimate connection as sanctuary from life\'s anxieties, a promise of unconditional acceptance when everything else feels empty and distressing. This poem holds a special place in your story together.',
-      isFavorite: true
+      story: 'This is the first poem you ever sent to Mila. Against a backdrop of chaos — big cars going nowhere, apocalyptic prophecies, newspaper horrors — Maya Angelou offers the simple, powerful refuge of love. When the world feels overwhelming and uncertain, the speaker says "I got it. Come. And be my baby." It\'s an invitation to intimate connection as sanctuary from life\'s anxieties, a promise of unconditional acceptance when everything else feels empty and distressing. This poem holds a special place in your story together.'
     },
     {
       title: 'How Do I Love Thee? (Sonnet 43)',

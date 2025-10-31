@@ -205,37 +205,16 @@ export class MonumentsOfLove {
       <div class="monument-slide outro-slide">
         <div class="outro-content">
           <div class="outro-letter">
-            <p class="letter-para">Mila,</p>
-
             <p class="letter-para">
-              I've shown you these monuments because they represent something profound:
-              the human impulse to create something lasting when words aren't enough.
+              Some things are worth the search.
             </p>
 
             <p class="letter-para">
-              Emperors built temples. Widows built abbeys. Fathers built castles.
-              All trying to capture in stone what they felt in their hearts.
-            </p>
-
-            <p class="letter-para">
-              This website is nothing in comparison to these monuments.
-            </p>
-
-            <p class="letter-para emphasis">
-              But it is only the beginning of what I would do for you.
-            </p>
-
-            <p class="letter-para">
-              Every puzzle, every secret, every hidden corner of this world—
-              they're all small stones in something I'm building for you.
-            </p>
-
-            <p class="letter-para">
-              Not a monument to remember love...
+              The best discoveries happen slowly.
             </p>
 
             <p class="letter-para final">
-              But a world to live it in.
+              Patience reveals what rushing conceals.
             </p>
 
             <div class="letter-signature">— T.K.</div>

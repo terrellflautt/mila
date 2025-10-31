@@ -48,101 +48,116 @@ class MilasWorld {
     this.audioVisualizer = null;
     this.magicCursor = null;
 
+    // Discovery system
+    this.discoveryContainer = null;
+    this.currentDiscoveryElement = null;
+    this.currentDiscoveryWanderingStopped = false;
+
     // All available experiences - ALL hidden until discovered one by one
+    // Discovery order matters - Echo Chamber ALWAYS first
     this.experiences = {
-      // All experiences start hidden and must be discovered
+      // FIRST EXPERIENCE - Always discovered first
       'Echo Chamber': {
         class: EchoChamber,
         icon: '🎵',
         description: 'Some rhythms sync without trying',
         hidden: true,
+        discoveryOrder: 1,  // Always first
         discoveryHint: 'Not everything worth finding announces itself...',
-        discoveryElement: 'whisper',   // Sound wave
-        discoveryColor: '#B19CD9'      // Lavender
+        discoveryElement: 'whisper',
+        discoveryColor: '#FF6B9D'      // Pink
       },
       'Eternal Garden': {
         class: EternalGarden,
         icon: '🌸',
         description: 'What grows between us',
         hidden: true,
+        discoveryOrder: 2,
         discoveryHint: 'There is more than meets the eye...',
-        discoveryElement: 'paint',     // Flower petal
-        discoveryColor: '#FFB6C1'      // Pink
+        discoveryElement: 'paint',
+        discoveryColor: '#FFB6C1'      // Light Pink
       },
 
-      // More hidden experiences to discover
+      // More hidden experiences to discover (pink/purple/red theme)
       'Reflections': {
         class: ReflectionsOfYou,
         icon: '🪞',
         description: "What you see depends on how you look",
         hidden: true,
+        discoveryOrder: 3,
         discoveryHint: 'Some things only appear when you stop looking...',
-        discoveryElement: 'shimmer',  // Shimmering mirror fragment
-        discoveryColor: '#88DDFF'     // Cyan/light blue
+        discoveryElement: 'shimmer',
+        discoveryColor: '#C9A0DC'      // Lavender
       },
       'Choreographer': {
         class: Choreographer,
         icon: '💫',
         description: 'Movement speaks louder than words',
         hidden: true,
+        discoveryOrder: 4,
         discoveryHint: 'Stillness reveals what motion conceals...',
-        discoveryElement: 'trail',     // Dancing light trail
-        discoveryColor: '#FFD700'      // Gold
+        discoveryElement: 'trail',
+        discoveryColor: '#D8BFD8'      // Thistle (light purple)
       },
       'Gallery of Us': {
         class: GalleryOfUs,
         icon: '🎨',
         description: 'Some art only exists between two people',
         hidden: true,
+        discoveryOrder: 5,
         discoveryHint: 'What you seek is already seeking you...',
-        discoveryElement: 'paint',     // Paint droplet
-        discoveryColor: '#FF6B9D'      // Pink/magenta
+        discoveryElement: 'paint',
+        discoveryColor: '#FF69B4'      // Hot Pink
       },
       'The Dialogue': {
         class: TheDialogue,
         icon: '💭',
         description: 'The best conversations happen in silence',
         hidden: true,
+        discoveryOrder: 6,
         discoveryHint: 'The quietest voices speak the loudest...',
-        discoveryElement: 'whisper',   // Thought bubble
-        discoveryColor: '#E8D5C4'      // Cream/beige
+        discoveryElement: 'whisper',
+        discoveryColor: '#DA70D6'      // Orchid (purple)
       },
       'Constellation You': {
         class: ConstellationYou,
         icon: '⭐',
         description: 'Separate points that form something whole',
         hidden: true,
-        disabled: true,  // Testing on test.html first
+        discoveryOrder: 7,
         discoveryHint: 'The stars know your story...',
-        discoveryElement: 'star',      // Yellow star (different from pink)
-        discoveryColor: '#FFF44F'      // Bright yellow
+        discoveryElement: 'star',
+        discoveryColor: '#FFB6C1'      // Pink (matches theme now)
       },
       'Mirror of Moments': {
         class: MirrorOfMoments,
         icon: '💎',
         description: 'Fragments that remember being one',
         hidden: true,
+        discoveryOrder: 8,
         discoveryHint: 'Broken things still hold light...',
-        discoveryElement: 'crystal',   // Crystal shard/prism
-        discoveryColor: '#C9A0DC'      // Purple/lavender
+        discoveryElement: 'crystal',
+        discoveryColor: '#B19CD9'      // Medium Purple
       },
       'Grace': {
         class: Grace,
         icon: '🎸',
         description: 'Mila\'s favorite',
         hidden: true,
+        discoveryOrder: 9,
         discoveryHint: 'beautiful melodies linger in sacred spaces...',
-        discoveryElement: 'shimmer',   // Musical shimmer
-        discoveryColor: '#E8D5C4'      // Cream/gold (Grace album aesthetic)
+        discoveryElement: 'shimmer',
+        discoveryColor: '#DDA0DD'      // Plum
       },
       'Stage Light': {
         class: StageLight,
         icon: '🎭',
         description: 'A name written in light and verse',
         hidden: true,
+        discoveryOrder: 10,
         discoveryHint: 'The stage is set, the curtain waits...',
-        discoveryElement: 'shimmer',   // Theatrical shimmer
-        discoveryColor: '#FFD700'      // Gold spotlight
+        discoveryElement: 'shimmer',
+        discoveryColor: '#FF82AB'      // Pale Violet Red
       },
       'Monuments of Love': {
         class: MonumentsOfLove,
@@ -150,7 +165,7 @@ class MilasWorld {
         description: 'A letter written in stone',
         hidden: false,  // Always visible once unlocked
         isFinal: true,  // Special final experience
-        discoveryColor: '#FFD700'  // Gold
+        discoveryColor: '#FFD700'  // Gold (special, not part of discovery)
       }
     };
 
@@ -606,6 +621,11 @@ class MilasWorld {
         await this.backgroundMusic.start();
         this.musicPlayer = new MusicPlayer(this.backgroundMusic);
         this.musicPlayer.onVisualToggle = () => this.toggleVisualExperience();
+        this.musicPlayer.onGardenToggle = () => this.toggleGardenExperience();
+        // Check if garden is unlocked
+        if (isPuzzleCompleted('Eternal Garden')) {
+          this.musicPlayer.gardenUnlocked = true;
+        }
         this.musicPlayer.show();
       }, 1000);
     }
@@ -852,15 +872,26 @@ class MilasWorld {
     const experience = this.experiences[name];
     if (!experience) return;
 
-    // Duck background music to 5% so experience audio can be heard clearly
-    this.backgroundMusic.duck(0.05, 1000);
+    // For Constellation You, keep music at normal volume for reactivity
+    // For other experiences, duck background music to 5% so experience audio can be heard clearly
+    if (name === 'Constellation You') {
+      // Don't duck music - we want it to drive the visuals!
+      const puzzle = new experience.class(
+        () => { this.onExperienceComplete(name); },
+        this.backgroundMusic  // Pass music system for reactivity
+      );
+      this.currentActivePuzzle = puzzle;
+      puzzle.show();
+    } else {
+      this.backgroundMusic.duck(0.05, 1000);
 
-    const puzzle = new experience.class(() => {
-      this.onExperienceComplete(name);
-    });
+      const puzzle = new experience.class(() => {
+        this.onExperienceComplete(name);
+      });
 
-    this.currentActivePuzzle = puzzle;
-    puzzle.show();
+      this.currentActivePuzzle = puzzle;
+      puzzle.show();
+    }
   }
 
   /**
@@ -971,6 +1002,11 @@ class MilasWorld {
                   this.musicPlayer = new MusicPlayer(this.backgroundMusic);
                   // Wire up visual experience toggle
                   this.musicPlayer.onVisualToggle = () => this.toggleVisualExperience();
+                  this.musicPlayer.onGardenToggle = () => this.toggleGardenExperience();
+                  // Check if garden is unlocked
+                  if (isPuzzleCompleted('Eternal Garden')) {
+                    this.musicPlayer.gardenUnlocked = true;
+                  }
                   // Show the player so she can control the music
                   this.musicPlayer.show();
                 }, 1500);
@@ -984,7 +1020,24 @@ class MilasWorld {
               }, 1000);
             }
 
+            // Special unlock for Eternal Garden - show garden button in music player
+            if (name === 'Eternal Garden' && this.musicPlayer) {
+              setTimeout(() => {
+                this.musicPlayer.gardenUnlocked = true;
+                // Show the button
+                const gardenBtn = this.musicPlayer.element.querySelector('.player-garden');
+                if (gardenBtn) {
+                  gardenBtn.style.display = '';
+                  gsap.fromTo(gardenBtn,
+                    { scale: 0, opacity: 0 },
+                    { scale: 1, opacity: 1, duration: 0.5, ease: 'back.out(2)' }
+                  );
+                }
+              }, 1000);
+            }
+
             // Restart discovery elements if there are more hidden experiences to find
+            // Wait 5 seconds after poem closes before showing next discovery
             setTimeout(() => {
               const remainingHidden = Object.entries(this.experiences)
                 .filter(([n, exp]) => exp.hidden && !exp.disabled && !this.discoveredExperiences.includes(n) && !exp.isFinal);
@@ -1002,7 +1055,7 @@ class MilasWorld {
                   this.createDiscoveryElements();
                 }
               }
-            }, 2000);
+            }, 5000);  // 5 seconds cooldown between discoveries
           });
 
           poemReward.show();
@@ -1041,6 +1094,7 @@ class MilasWorld {
         }
 
         // Check if there are more hidden experiences to discover
+        // Wait 5 seconds before showing next discovery
         setTimeout(() => {
           const remaining = Object.entries(this.experiences)
             .filter(([n, exp]) => exp.hidden && !exp.disabled && !this.discoveredExperiences.includes(n) && !exp.isFinal);
@@ -1056,7 +1110,7 @@ class MilasWorld {
               this.createDiscoveryElements();
             }
           }
-        }, 2000);
+        }, 5000);  // 5 seconds cooldown between discoveries
       }, 1500);
     } else {
       // All experiences discovered, show a poem/message with curtain reveal
@@ -1089,6 +1143,19 @@ class MilasWorld {
   }
 
   /**
+   * Toggle garden experience - Open Eternal Garden
+   */
+  toggleGardenExperience() {
+    // Check if already completed
+    if (!isPuzzleCompleted('Eternal Garden')) {
+      return;
+    }
+
+    // Start the garden experience
+    this.startIndividualExperience('Eternal Garden');
+  }
+
+  /**
    * Create peaceful discovery elements throughout the stage
    */
   createDiscoveryElements() {
@@ -1096,6 +1163,19 @@ class MilasWorld {
       .filter(([name, exp]) => exp.hidden && !exp.disabled && !this.discoveredExperiences.includes(name));
 
     if (hiddenExperiences.length === 0) return; // All discovered
+
+    // GUARD: If discovery container already exists, just update the list and return
+    // Don't create multiple containers or multiple wandering stars
+    if (this.discoveryContainer && this.discoveryContainer.parentNode) {
+      this.hiddenExperiences = hiddenExperiences;
+      // If there's no active discovery element, create one
+      if (!this.currentDiscoveryElement || !this.currentDiscoveryElement.parentNode) {
+        setTimeout(() => {
+          this.createWanderingDiscoveryElement();
+        }, 3000);
+      }
+      return;
+    }
 
     // Create subtle, clickable discovery elements
     const discoveryContainer = document.createElement('div');
@@ -1211,13 +1291,23 @@ class MilasWorld {
 
   /**
    * Create a wandering discovery element that fades in/out and moves
+   * Shows NEXT experience in discoveryOrder sequence (not random)
    */
   createWanderingDiscoveryElement() {
     if (!this.hiddenExperiences || this.hiddenExperiences.length === 0) return;
 
-    // Pick a RANDOM hidden experience (no longer in order!)
-    const randomIndex = Math.floor(Math.random() * this.hiddenExperiences.length);
-    const [name, exp] = this.hiddenExperiences[randomIndex];
+    // GUARD: Only allow ONE active discovery element at a time
+    if (this.currentDiscoveryElement && this.currentDiscoveryElement.parentNode) {
+      console.log('Discovery star already active, skipping creation');
+      return;
+    }
+
+    // Sort by discoveryOrder and pick the FIRST one (lowest order number)
+    const sortedExperiences = [...this.hiddenExperiences].sort((a, b) => {
+      return (a[1].discoveryOrder || 999) - (b[1].discoveryOrder || 999);
+    });
+
+    const [name, exp] = sortedExperiences[0];
 
     // Use themed discovery element
     const element = createThemedDiscoveryElement(
@@ -1235,6 +1325,9 @@ class MilasWorld {
     element.style.opacity = '0';
 
     this.discoveryContainer.appendChild(element);
+
+    // Track the active discovery element
+    this.currentDiscoveryElement = element;
 
     // Hover to reveal tooltip
     element.addEventListener('mouseenter', () => {
@@ -1336,7 +1429,11 @@ class MilasWorld {
       scale: 1.5,
       duration: 1,
       ease: 'power2.out',
-      onComplete: () => element.remove()
+      onComplete: () => {
+        element.remove();
+        // Clear the reference so a new star can be created
+        this.currentDiscoveryElement = null;
+      }
     });
 
     // If this is the FIRST discovery ever, unlock the gallery
@@ -1365,19 +1462,20 @@ class MilasWorld {
       }
 
       // Check if there are more hidden experiences
+      // Wait 5 seconds before showing next discovery
       setTimeout(() => {
         const remaining = Object.entries(this.experiences)
           .filter(([n, exp]) => exp.hidden && !exp.disabled && !this.discoveredExperiences.includes(n));
 
         if (remaining.length > 0) {
-          // Update the hidden experiences list for random selection
+          // Update the hidden experiences list
           this.hiddenExperiences = remaining;
           this.currentDiscoveryWanderingStopped = false;
 
-          // Start a new wandering star (will pick random from remaining)
+          // Start a new wandering star (will pick next in order)
           this.createWanderingDiscoveryElement();
         }
-      }, 2000);
+      }, 5000);  // 5 seconds cooldown between discoveries
     }, 1500);
   }
 

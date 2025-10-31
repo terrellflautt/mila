@@ -1,13 +1,10 @@
 /**
  * Eternal Garden - Beautiful, Artistic Edition
  * A stunning, impressionistic garden experience for mobile
- * Enhanced with interactive planting, growth simulation, and genetics
  */
 
 import * as THREE from 'three';
 import gsap from 'gsap';
-import { animate as anime } from 'animejs';
-import { GardenSimulator, GrowthStages } from '../utils/gardenSimulator.js';
 
 export class EternalGarden {
   constructor(onComplete) {
@@ -29,14 +26,12 @@ export class EternalGarden {
 
     // Garden state
     this.isComplete = false;
-    this.simulator = new GardenSimulator();
+    this.seedQueue = [];
+    this.lastPlantTick = 0;
+    this.plantCount = 0; // Flowers, trees, bushes
+    this.maxPlants = 30;
     this.visitStartTime = null;
     this.poemsUnlocked = 0;
-
-    // UI interaction state
-    this.selectedPlants = [];
-    this.selectedAction = 'plant'; // 'plant', 'water', 'fertilize', 'harvest', 'crossbreed'
-    this.atmosphericParticles = [];
 
     // Poems to unlock
     this.poems = [
@@ -49,14 +44,12 @@ export class EternalGarden {
     ];
 
     // Systems
-    this.plantMeshes = new Map(); // Map of plant ID -> THREE.Group
+    this.plants = []; // All plant types: flowers, trees, bushes
     this.flamingos = [];
     this.goldfish = [];
     this.ground = null;
     this.stars = null;
     this.mist = null;
-    this.atmosphericParticleSystem = null;
-    this.butterflies = [];
 
     // Day/night palette - enhanced with more vibrant colors
     this.palette = {
@@ -114,55 +107,6 @@ export class EternalGarden {
         <div class="garden-time-indicator">
           <span class="current-time">Dawn</span>
         </div>
-
-        <!-- Resources & Skill Panel -->
-        <div class="garden-resources-panel">
-          <div class="skill-display">
-            <div class="skill-icon">🌱</div>
-            <div class="skill-info">
-              <div class="skill-level">Lv. <span id="skill-level">1</span></div>
-              <div class="xp-bar">
-                <div class="xp-fill" id="xp-fill"></div>
-              </div>
-            </div>
-          </div>
-          <div class="resources">
-            <div class="resource">
-              <span class="resource-icon">🌾</span>
-              <span class="resource-value" id="seeds-count">3</span>
-            </div>
-            <div class="resource">
-              <span class="resource-icon">💧</span>
-              <span class="resource-value" id="water-count">10</span>
-            </div>
-            <div class="resource">
-              <span class="resource-icon">✨</span>
-              <span class="resource-value" id="fertilizer-count">5</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Action Buttons -->
-        <div class="garden-actions">
-          <button class="action-btn active" data-action="plant" title="Plant Seed">
-            <span class="action-icon">🌱</span>
-          </button>
-          <button class="action-btn" data-action="water" title="Water Plant">
-            <span class="action-icon">💧</span>
-          </button>
-          <button class="action-btn" data-action="fertilize" title="Fertilize Plant">
-            <span class="action-icon">✨</span>
-          </button>
-          <button class="action-btn" data-action="harvest" title="Harvest Plant">
-            <span class="action-icon">🌸</span>
-          </button>
-          <button class="action-btn" data-action="crossbreed" title="Cross-breed Plants">
-            <span class="action-icon">🧬</span>
-          </button>
-        </div>
-
-        <!-- Info Display -->
-        <div class="garden-info" id="garden-info"></div>
       </div>
     `;
 
@@ -202,7 +146,6 @@ export class EternalGarden {
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.2;
-    this.renderer.shadowMap.enabled = false; // Keep performance good
     container.appendChild(this.renderer.domElement);
 
     // Soft, warm lighting
@@ -230,12 +173,6 @@ export class EternalGarden {
     // Fireflies
     this.createFireflies();
 
-    // Atmospheric particles (pollen, butterflies)
-    this.createAtmosphericParticles();
-
-    // Butterflies
-    this.createButterflies();
-
     // 2 Pink flamingos
     this.createFlamingos();
 
@@ -244,9 +181,6 @@ export class EternalGarden {
 
     // Pond with goldfish
     this.createPond();
-
-    // Load existing plants from simulator
-    this.loadExistingPlants();
   }
 
   createGround() {
@@ -429,141 +363,6 @@ export class EternalGarden {
 
     this.fireflySystem = new THREE.Points(geometry, material);
     this.scene.add(this.fireflySystem);
-  }
-
-  createAtmosphericParticles() {
-    // Floating pollen/dust particles
-    const count = 100;
-    const positions = new Float32Array(count * 3);
-    const velocities = new Float32Array(count * 3);
-    const sizes = new Float32Array(count);
-
-    for (let i = 0; i < count; i++) {
-      positions[i * 3] = (Math.random() - 0.5) * 40;
-      positions[i * 3 + 1] = Math.random() * 15;
-      positions[i * 3 + 2] = (Math.random() - 0.5) * 40;
-
-      velocities[i * 3] = (Math.random() - 0.5) * 0.02;
-      velocities[i * 3 + 1] = Math.random() * 0.01 + 0.005;
-      velocities[i * 3 + 2] = (Math.random() - 0.5) * 0.02;
-
-      sizes[i] = Math.random() * 0.5 + 0.3;
-    }
-
-    const geometry = new THREE.BufferGeometry();
-    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-    geometry.setAttribute('velocity', new THREE.BufferAttribute(velocities, 3));
-    geometry.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
-
-    const material = new THREE.ShaderMaterial({
-      transparent: true,
-      blending: THREE.AdditiveBlending,
-      depthWrite: false,
-      uniforms: {
-        time: { value: 0 },
-        opacity: { value: 0.6 },
-        dayNightPhase: { value: 1.0 }
-      },
-      vertexShader: `
-        attribute float size;
-        attribute vec3 velocity;
-        uniform float time;
-        varying float vOpacity;
-        void main() {
-          vOpacity = 0.3 + sin(time * 2.0 + position.x) * 0.3;
-          vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
-          gl_PointSize = size * (300.0 / -mvPosition.z);
-          gl_Position = projectionMatrix * mvPosition;
-        }
-      `,
-      fragmentShader: `
-        uniform float opacity;
-        uniform float dayNightPhase;
-        varying float vOpacity;
-        void main() {
-          vec2 center = gl_PointCoord - vec2(0.5);
-          float dist = length(center);
-          float alpha = smoothstep(0.5, 0.0, dist) * opacity * vOpacity * dayNightPhase;
-
-          // Warm golden color during day
-          vec3 color = vec3(1.0, 0.95, 0.7);
-
-          gl_FragColor = vec4(color, alpha);
-        }
-      `
-    });
-
-    this.atmosphericParticleSystem = new THREE.Points(geometry, material);
-    this.scene.add(this.atmosphericParticleSystem);
-  }
-
-  createButterflies() {
-    // Create 5 butterflies that fly around
-    for (let i = 0; i < 5; i++) {
-      const butterfly = this.createButterfly();
-
-      const angle = (i / 5) * Math.PI * 2;
-      const radius = 8 + Math.random() * 5;
-
-      butterfly.position.set(
-        Math.cos(angle) * radius,
-        2 + Math.random() * 3,
-        Math.sin(angle) * radius
-      );
-
-      butterfly.userData = {
-        flyAngle: angle,
-        flySpeed: 0.3 + Math.random() * 0.2,
-        flyRadius: radius,
-        bobPhase: Math.random() * Math.PI * 2,
-        wingPhase: Math.random() * Math.PI * 2
-      };
-
-      this.butterflies.push(butterfly);
-      this.scene.add(butterfly);
-    }
-  }
-
-  createButterfly() {
-    const group = new THREE.Group();
-
-    // Simple butterfly geometry
-    const wingGeo = new THREE.CircleGeometry(0.15, 6);
-    const wingMat = new THREE.MeshStandardMaterial({
-      color: new THREE.Color().setHSL(Math.random(), 0.7, 0.6),
-      side: THREE.DoubleSide,
-      transparent: true,
-      opacity: 0.8,
-      emissive: new THREE.Color().setHSL(Math.random(), 0.5, 0.2),
-      emissiveIntensity: 0.3
-    });
-
-    const leftWing = new THREE.Mesh(wingGeo, wingMat);
-    leftWing.position.x = -0.1;
-    leftWing.rotation.y = Math.PI * 0.3;
-    group.add(leftWing);
-
-    const rightWing = new THREE.Mesh(wingGeo.clone(), wingMat.clone());
-    rightWing.position.x = 0.1;
-    rightWing.rotation.y = -Math.PI * 0.3;
-    group.add(rightWing);
-
-    // Store wings for animation
-    group.userData.wings = [leftWing, rightWing];
-
-    // Body
-    const bodyGeo = new THREE.CapsuleGeometry(0.02, 0.15, 4, 8);
-    const bodyMat = new THREE.MeshStandardMaterial({
-      color: 0x2a2a2a,
-      roughness: 0.8
-    });
-    const body = new THREE.Mesh(bodyGeo, bodyMat);
-    body.rotation.z = Math.PI / 2;
-    group.add(body);
-
-    group.scale.setScalar(0.8);
-
-    return group;
   }
 
   createFlamingos() {
@@ -1241,180 +1040,6 @@ export class EternalGarden {
 
     const exitBtn = this.element.querySelector('.garden-exit-btn');
     exitBtn.addEventListener('click', () => this.hide());
-
-    // Action button listeners
-    const actionBtns = this.element.querySelectorAll('.action-btn');
-    actionBtns.forEach(btn => {
-      btn.addEventListener('click', () => {
-        const action = btn.dataset.action;
-        this.setAction(action);
-
-        // Update button states
-        actionBtns.forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-      });
-    });
-  }
-
-  setAction(action) {
-    this.selectedAction = action;
-    this.selectedPlants = []; // Clear selection when changing actions
-
-    // Update cursor
-    const canvas = this.renderer.domElement;
-    const cursors = {
-      plant: 'crosshair',
-      water: 'pointer',
-      fertilize: 'pointer',
-      harvest: 'pointer',
-      crossbreed: 'pointer'
-    };
-    canvas.style.cursor = cursors[action] || 'default';
-  }
-
-  showInfo(message, duration = 2000, isError = false) {
-    const infoEl = this.element.querySelector('#garden-info');
-    infoEl.textContent = message;
-    infoEl.className = `garden-info ${isError ? 'error' : 'success'}`;
-    infoEl.style.opacity = '1';
-
-    setTimeout(() => {
-      infoEl.style.opacity = '0';
-    }, duration);
-  }
-
-  updateUI() {
-    // Update skill display
-    const skill = this.simulator.skill;
-    const resources = this.simulator.resources;
-
-    const skillLevelEl = this.element.querySelector('#skill-level');
-    const xpFillEl = this.element.querySelector('#xp-fill');
-    const seedsEl = this.element.querySelector('#seeds-count');
-    const waterEl = this.element.querySelector('#water-count');
-    const fertilizerEl = this.element.querySelector('#fertilizer-count');
-
-    if (skillLevelEl) skillLevelEl.textContent = skill.level;
-
-    // XP bar
-    const xpForNextLevel = 100 + (skill.level - 1) * 10;
-    const xpPercent = (skill.experience / xpForNextLevel) * 100;
-    if (xpFillEl) xpFillEl.style.width = `${xpPercent}%`;
-
-    // Resources
-    if (seedsEl) seedsEl.textContent = resources.seeds;
-    if (waterEl) waterEl.textContent = resources.water;
-    if (fertilizerEl) fertilizerEl.textContent = resources.fertilizer;
-  }
-
-  loadExistingPlants() {
-    // Load plants from simulator and create their 3D meshes
-    this.simulator.plants.forEach(plant => {
-      this.createPlantMesh(plant);
-    });
-
-    this.updateUI();
-  }
-
-  updatePlantGrowth() {
-    // Check all plants for growth stage changes
-    this.simulator.plants.forEach(plant => {
-      const mesh = this.plantMeshes.get(plant.id);
-      if (!mesh) return;
-
-      // Check if plant stage changed
-      if (mesh.userData.lastStage !== plant.stage) {
-        // Plant has grown!
-        this.onPlantGrow(plant, mesh);
-        mesh.userData.lastStage = plant.stage;
-      }
-
-      // Update scale based on stage
-      const targetScale = this.simulator.getPlantScale(plant);
-      if (mesh.scale.x !== targetScale) {
-        anime({
-          targets: mesh.scale,
-          x: targetScale,
-          y: targetScale,
-          z: targetScale,
-          duration: 2000,
-          easing: 'easeOutElastic(1, 0.5)'
-        });
-      }
-    });
-  }
-
-  onPlantGrow(plant, mesh) {
-    // Update geometry for new growth stage
-    const color = this.simulator.getPlantColor(plant);
-    this.updatePlantGeometry(mesh, plant, color);
-
-    // Growth particle effect
-    this.createGrowthParticles(mesh.position);
-
-    // Play sound
-    this.playGrowthSound(1.0 + plant.stage * 0.1);
-
-    // Show notification
-    const stageNames = ['Seed', 'Sprout', 'Small', 'Medium', 'Mature'];
-    if (plant.stage > 0) {
-      this.showInfo(`Plant grew to ${stageNames[plant.stage]}!`);
-    }
-
-    // Update UI in case we leveled up
-    this.updateUI();
-  }
-
-  createGrowthParticles(position) {
-    const count = 12;
-
-    for (let i = 0; i < count; i++) {
-      const geometry = new THREE.SphereGeometry(0.05, 6, 6);
-      const material = new THREE.MeshBasicMaterial({
-        color: 0x4CAF50,
-        transparent: true,
-        opacity: 0.9
-      });
-      const particle = new THREE.Mesh(geometry, material);
-
-      particle.position.copy(position);
-      particle.position.y += 0.2;
-
-      this.scene.add(particle);
-
-      const angle = (i / count) * Math.PI * 2;
-      const radius = 0.4 + Math.random() * 0.3;
-
-      anime({
-        targets: particle.position,
-        x: position.x + Math.cos(angle) * radius,
-        y: position.y + 0.8 + Math.random() * 0.4,
-        z: position.z + Math.sin(angle) * radius,
-        duration: 1000,
-        easing: 'easeOutQuad',
-        complete: () => {
-          this.scene.remove(particle);
-          geometry.dispose();
-          material.dispose();
-        }
-      });
-
-      anime({
-        targets: particle.material,
-        opacity: 0,
-        duration: 1000,
-        easing: 'linear'
-      });
-
-      anime({
-        targets: particle.scale,
-        x: 1.5,
-        y: 1.5,
-        z: 1.5,
-        duration: 500,
-        easing: 'easeOutQuad'
-      });
-    }
   }
 
   onCanvasClick(event) {
@@ -1423,215 +1048,21 @@ export class EternalGarden {
     this.mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
 
     this.raycaster.setFromCamera(this.mouse, this.camera);
+    const groundY = -2.5;
 
-    // Check if clicking on a plant
-    const plantObjects = Array.from(this.plantMeshes.values());
-    const intersects = this.raycaster.intersectObjects(plantObjects, true);
+    const ray = this.raycaster.ray;
+    const t = (groundY - ray.origin.y) / ray.direction.y;
+    if (t > 0) {
+      const intersectPoint = new THREE.Vector3();
+      intersectPoint.copy(ray.origin).addScaledVector(ray.direction, t);
 
-    if (intersects.length > 0) {
-      // Clicked on a plant
-      const clickedPlant = intersects[0].object;
-      let plantGroup = clickedPlant;
+      this.seedQueue.push({
+        pos: intersectPoint.clone(),
+        queuedAt: performance.now() / 1000
+      });
 
-      // Find the root group
-      while (plantGroup.parent && !plantGroup.userData.plantId) {
-        plantGroup = plantGroup.parent;
-      }
-
-      if (plantGroup.userData.plantId) {
-        this.handlePlantClick(plantGroup.userData.plantId);
-        return;
-      }
-    }
-
-    // If not clicking on a plant, handle ground interaction
-    if (this.selectedAction === 'plant') {
-      const groundY = -2.5;
-      const ray = this.raycaster.ray;
-      const t = (groundY - ray.origin.y) / ray.direction.y;
-
-      if (t > 0) {
-        const intersectPoint = new THREE.Vector3();
-        intersectPoint.copy(ray.origin).addScaledVector(ray.direction, t);
-
-        // Plant seed using simulator
-        const result = this.simulator.plantSeed(intersectPoint);
-
-        if (result.success) {
-          this.createPlantingBurst(intersectPoint);
-          this.playGrowthSound(0.9);
-          this.createPlantMesh(result.plant);
-          this.updateUI();
-          this.showInfo('Seed planted!');
-        } else {
-          this.showInfo(result.message, 2000, true);
-        }
-      }
-    }
-  }
-
-  handlePlantClick(plantId) {
-    const plant = this.simulator.plants.find(p => p.id === plantId);
-    if (!plant) return;
-
-    switch (this.selectedAction) {
-      case 'water':
-        this.waterPlant(plantId);
-        break;
-
-      case 'fertilize':
-        this.fertilizePlant(plantId);
-        break;
-
-      case 'harvest':
-        this.harvestPlant(plantId);
-        break;
-
-      case 'crossbreed':
-        this.selectPlantForBreeding(plantId);
-        break;
-
-      default:
-        // Just show plant info
-        this.showPlantInfo(plant);
-        break;
-    }
-  }
-
-  waterPlant(plantId) {
-    const result = this.simulator.waterPlant(plantId);
-
-    if (result.success) {
-      this.createWaterParticles(plantId);
-      this.playGrowthSound(1.2);
-      this.updateUI();
-      this.showInfo('Plant watered!');
-    } else {
-      this.showInfo(result.message, 2000, true);
-    }
-  }
-
-  fertilizePlant(plantId) {
-    const result = this.simulator.fertilizePlant(plantId);
-
-    if (result.success) {
-      this.createFertilizerParticles(plantId);
-      this.playGrowthSound(1.3);
-      this.updateUI();
-      this.showInfo('Plant fertilized!');
-    } else {
-      this.showInfo(result.message, 2000, true);
-    }
-  }
-
-  harvestPlant(plantId) {
-    const result = this.simulator.harvestPlant(plantId);
-
-    if (result.success) {
-      this.removePlantMesh(plantId);
-      this.playGrowthSound(1.5);
-      this.updateUI();
-      this.showInfo(result.message);
-    } else {
-      this.showInfo(result.message, 2000, true);
-    }
-  }
-
-  selectPlantForBreeding(plantId) {
-    const plant = this.simulator.plants.find(p => p.id === plantId);
-    if (!plant) return;
-
-    if (plant.stage < GrowthStages.MATURE) {
-      this.showInfo('Plant must be mature to breed!', 2000, true);
-      return;
-    }
-
-    if (this.selectedPlants.includes(plantId)) {
-      // Deselect
-      this.selectedPlants = this.selectedPlants.filter(id => id !== plantId);
-      this.updatePlantSelection(plantId, false);
-      return;
-    }
-
-    if (this.selectedPlants.length >= 2) {
-      this.showInfo('Can only select 2 plants!', 2000, true);
-      return;
-    }
-
-    this.selectedPlants.push(plantId);
-    this.updatePlantSelection(plantId, true);
-
-    if (this.selectedPlants.length === 2) {
-      // Perform crossbreeding
-      const result = this.simulator.crossBreed(this.selectedPlants[0], this.selectedPlants[1]);
-
-      if (result.success) {
-        this.createBreedingEffect(this.selectedPlants[0], this.selectedPlants[1]);
-        this.playGrowthSound(1.8);
-        this.updateUI();
-        this.showInfo(result.message);
-
-        // Clear selection
-        this.selectedPlants.forEach(id => this.updatePlantSelection(id, false));
-        this.selectedPlants = [];
-      } else {
-        this.showInfo(result.message, 2000, true);
-        this.selectedPlants.forEach(id => this.updatePlantSelection(id, false));
-        this.selectedPlants = [];
-      }
-    } else {
-      this.showInfo('Select another plant to breed...');
-    }
-  }
-
-  showPlantInfo(plant) {
-    const stageNames = ['Seed', 'Sprout', 'Small', 'Medium', 'Mature'];
-    const stageName = stageNames[plant.stage];
-    const color = plant.genetics.colors.expressed;
-    const size = plant.genetics.sizes.expressed;
-
-    this.showInfo(`${size} ${color} ${stageName}`, 3000);
-  }
-
-  updatePlantSelection(plantId, selected) {
-    const mesh = this.plantMeshes.get(plantId);
-    if (!mesh) return;
-
-    if (selected) {
-      // Add selection indicator (glow effect)
-      if (!mesh.userData.selectionGlow) {
-        const glowGeo = new THREE.SphereGeometry(1.2, 16, 16);
-        const glowMat = new THREE.MeshBasicMaterial({
-          color: 0xffff00,
-          transparent: true,
-          opacity: 0.3,
-          blending: THREE.AdditiveBlending
-        });
-        const glow = new THREE.Mesh(glowGeo, glowMat);
-        glow.scale.setScalar(1.5);
-        mesh.add(glow);
-        mesh.userData.selectionGlow = glow;
-
-        // Pulse animation
-        anime({
-          targets: glow.scale,
-          x: 1.7,
-          y: 1.7,
-          z: 1.7,
-          duration: 800,
-          easing: 'easeInOutSine',
-          direction: 'alternate',
-          loop: true
-        });
-      }
-    } else {
-      // Remove selection indicator
-      if (mesh.userData.selectionGlow) {
-        mesh.remove(mesh.userData.selectionGlow);
-        mesh.userData.selectionGlow.geometry.dispose();
-        mesh.userData.selectionGlow.material.dispose();
-        mesh.userData.selectionGlow = null;
-      }
+      this.createPlantingBurst(intersectPoint);
+      this.playGrowthSound(0.9);
     }
   }
 
@@ -1673,530 +1104,243 @@ export class EternalGarden {
     }
   }
 
-  createWaterParticles(plantId) {
-    const mesh = this.plantMeshes.get(plantId);
-    if (!mesh) return;
+  processSeedQueue(tNow) {
+    if (!this.seedQueue.length) return;
 
-    const position = mesh.position.clone();
-    const count = 20;
+    if (tNow - this.lastPlantTick < 3.5) return;
 
-    for (let i = 0; i < count; i++) {
-      const geometry = new THREE.SphereGeometry(0.06, 6, 6);
-      const material = new THREE.MeshBasicMaterial({
-        color: 0x4A9FD8,
-        transparent: true,
-        opacity: 0.8
-      });
-      const particle = new THREE.Mesh(geometry, material);
+    this.lastPlantTick = tNow;
+    const entry = this.seedQueue.shift();
 
-      particle.position.copy(position);
-      particle.position.y += 2 + Math.random();
-
-      this.scene.add(particle);
-
-      const angle = Math.random() * Math.PI * 2;
-      const radius = Math.random() * 0.5;
-
-      anime({
-        targets: particle.position,
-        x: position.x + Math.cos(angle) * radius,
-        y: position.y - 0.5,
-        z: position.z + Math.sin(angle) * radius,
-        duration: 600 + Math.random() * 400,
-        easing: 'easeInQuad',
-        complete: () => {
-          this.scene.remove(particle);
-          geometry.dispose();
-          material.dispose();
-        }
-      });
-
-      anime({
-        targets: particle.material,
-        opacity: 0,
-        duration: 600,
-        easing: 'linear'
-      });
+    if (this.plantCount >= this.maxPlants) {
+      return; // Just skip if at max
     }
 
-    // Ripple effect
-    this.createRippleEffect(position);
+    this.plantCount++;
+
+    setTimeout(() => {
+      // Randomly choose plant type
+      const rand = Math.random();
+      if (rand < 0.5) {
+        this.createBeautifulFlower(entry.pos);
+      } else if (rand < 0.75) {
+        this.createTree(entry.pos);
+      } else {
+        this.createBush(entry.pos);
+      }
+    }, (3 + Math.random() * 5) * 1000);
   }
 
-  createFertilizerParticles(plantId) {
-    const mesh = this.plantMeshes.get(plantId);
-    if (!mesh) return;
+  createBeautifulFlower(position) {
+    const flowerGroup = new THREE.Group();
+    flowerGroup.position.copy(position);
+    flowerGroup.position.y = -2.3;
 
-    const position = mesh.position.clone();
-    const count = 15;
+    // Random flower type
+    const hue = Math.random();
+    const color = new THREE.Color().setHSL(hue, 0.8, 0.65);
 
-    for (let i = 0; i < count; i++) {
-      const geometry = new THREE.SphereGeometry(0.05, 6, 6);
-      const material = new THREE.MeshBasicMaterial({
-        color: 0xFFD700,
+    // Create beautiful petal structure
+    const petalCount = 5 + Math.floor(Math.random() * 3);
+
+    for (let i = 0; i < petalCount; i++) {
+      const angle = (i / petalCount) * Math.PI * 2;
+
+      // Petal geometry
+      const petalGeo = new THREE.SphereGeometry(0.25, 16, 16);
+      petalGeo.scale(1.5, 0.3, 0.8);
+
+      const petalMat = new THREE.MeshStandardMaterial({
+        color: color,
         transparent: true,
-        opacity: 0.9
-      });
-      const particle = new THREE.Mesh(geometry, material);
-
-      particle.position.copy(position);
-      particle.position.y += Math.random() * 0.5;
-
-      this.scene.add(particle);
-
-      const angle = Math.random() * Math.PI * 2;
-      const radius = 0.3 + Math.random() * 0.4;
-
-      anime({
-        targets: particle.position,
-        x: position.x + Math.cos(angle) * radius,
-        y: position.y + 1 + Math.random() * 0.5,
-        z: position.z + Math.sin(angle) * radius,
-        duration: 800 + Math.random() * 400,
-        easing: 'easeOutQuad',
-        complete: () => {
-          // Sparkle at the end
-          anime({
-            targets: particle.scale,
-            x: 2,
-            y: 2,
-            z: 2,
-            duration: 200,
-            easing: 'easeOutQuad',
-            complete: () => {
-              this.scene.remove(particle);
-              geometry.dispose();
-              material.dispose();
-            }
-          });
-        }
+        opacity: 0.85,
+        roughness: 0.7,
+        metalness: 0.1,
+        side: THREE.DoubleSide
       });
 
-      anime({
-        targets: particle.material,
-        opacity: 0,
-        duration: 1000,
-        delay: 200,
-        easing: 'linear'
-      });
+      const petal = new THREE.Mesh(petalGeo, petalMat);
+      petal.position.x = Math.cos(angle) * 0.35;
+      petal.position.z = Math.sin(angle) * 0.35;
+      petal.position.y = 0;
+
+      petal.rotation.y = -angle;
+      petal.rotation.x = Math.PI / 6;
+
+      flowerGroup.add(petal);
     }
-  }
 
-  createRippleEffect(position) {
-    const rippleGeo = new THREE.RingGeometry(0.1, 0.2, 32);
-    const rippleMat = new THREE.MeshBasicMaterial({
-      color: 0x4A9FD8,
+    // Center
+    const centerGeo = new THREE.SphereGeometry(0.15, 16, 16);
+    const centerMat = new THREE.MeshStandardMaterial({
+      color: 0xffd700,
+      roughness: 0.4,
+      metalness: 0.2
+    });
+    const center = new THREE.Mesh(centerGeo, centerMat);
+    center.position.y = 0.1;
+    flowerGroup.add(center);
+
+    // Add glow
+    const glowGeo = new THREE.SphereGeometry(0.6, 16, 16);
+    const glowMat = new THREE.MeshBasicMaterial({
+      color: color,
       transparent: true,
-      opacity: 0.6,
-      side: THREE.DoubleSide
-    });
-    const ripple = new THREE.Mesh(rippleGeo, rippleMat);
-    ripple.position.copy(position);
-    ripple.position.y = -2.4;
-    ripple.rotation.x = -Math.PI / 2;
-
-    this.scene.add(ripple);
-
-    anime({
-      targets: ripple.scale,
-      x: 5,
-      y: 5,
-      z: 5,
-      duration: 1000,
-      easing: 'easeOutQuad'
-    });
-
-    anime({
-      targets: rippleMat,
       opacity: 0,
-      duration: 1000,
-      easing: 'linear',
-      complete: () => {
-        this.scene.remove(ripple);
-        rippleGeo.dispose();
-        rippleMat.dispose();
-      }
+      blending: THREE.AdditiveBlending
     });
-  }
+    const glow = new THREE.Mesh(glowGeo, glowMat);
+    flowerGroup.add(glow);
 
-  createBreedingEffect(plantId1, plantId2) {
-    const mesh1 = this.plantMeshes.get(plantId1);
-    const mesh2 = this.plantMeshes.get(plantId2);
-    if (!mesh1 || !mesh2) return;
+    this.scene.add(flowerGroup);
+    this.plants.push({ group: flowerGroup, glow: glowMat, type: 'flower' });
 
-    const pos1 = mesh1.position.clone();
-    const pos2 = mesh2.position.clone();
-    const midpoint = new THREE.Vector3().lerpVectors(pos1, pos2, 0.5);
-    midpoint.y += 2;
+    // Grow animation
+    flowerGroup.scale.set(0, 0, 0);
 
-    // Create heart particles
-    const count = 10;
-    for (let i = 0; i < count; i++) {
-      const geometry = new THREE.SphereGeometry(0.1, 8, 8);
-      const material = new THREE.MeshBasicMaterial({
-        color: 0xFF69B4,
-        transparent: true,
-        opacity: 0.9
-      });
-      const particle = new THREE.Mesh(geometry, material);
+    gsap.to(flowerGroup.scale, {
+      x: 1,
+      y: 1,
+      z: 1,
+      duration: 4,
+      ease: 'elastic.out(1, 0.5)'
+    });
 
-      particle.position.copy(midpoint);
+    gsap.to(glowMat, {
+      opacity: 0.3,
+      duration: 2,
+      delay: 3,
+      ease: 'power2.out'
+    });
 
-      this.scene.add(particle);
+    // Gentle sway
+    gsap.to(flowerGroup.rotation, {
+      z: (Math.random() - 0.5) * 0.15,
+      duration: 2 + Math.random() * 2,
+      yoyo: true,
+      repeat: -1,
+      ease: 'sine.inOut'
+    });
 
-      const angle = (i / count) * Math.PI * 2;
-      const radius = 1;
+    this.playGrowthSound(1 + hue * 0.5);
 
-      anime({
-        targets: particle.position,
-        x: midpoint.x + Math.cos(angle) * radius,
-        y: midpoint.y + 1,
-        z: midpoint.z + Math.sin(angle) * radius,
-        duration: 1000,
-        easing: 'easeOutQuad',
-        complete: () => {
-          this.scene.remove(particle);
-          geometry.dispose();
-          material.dispose();
-        }
-      });
-
-      anime({
-        targets: particle.material,
-        opacity: 0,
-        duration: 1000,
-        easing: 'linear'
-      });
+    // Check if we should unlock a poem (every 4 plants)
+    if (this.plantCount % 4 === 0 && this.poemsUnlocked < this.poems.length) {
+      setTimeout(() => {
+        this.showPoem(this.poems[this.poemsUnlocked]);
+        this.poemsUnlocked++;
+      }, 2000);
     }
   }
 
-  createPlantMesh(plant) {
-    const plantGroup = new THREE.Group();
-    plantGroup.position.copy(plant.position);
-    plantGroup.position.y = -2.3;
-    plantGroup.userData.plantId = plant.id;
+  createTree(position) {
+    const treeGroup = new THREE.Group();
+    treeGroup.position.copy(position);
+    treeGroup.position.y = -2.3;
 
-    // Get color from genetics
-    const color = this.simulator.getPlantColor(plant);
-    const scale = this.simulator.getPlantScale(plant);
+    // Trunk
+    const trunkGeo = new THREE.CylinderGeometry(0.15, 0.2, 2, 8);
+    const trunkMat = new THREE.MeshStandardMaterial({
+      color: 0x5d4037,
+      roughness: 0.9
+    });
+    const trunk = new THREE.Mesh(trunkGeo, trunkMat);
+    trunk.position.y = 1;
+    treeGroup.add(trunk);
 
-    // Create plant based on stage
-    this.updatePlantGeometry(plantGroup, plant, color);
+    // Foliage (3 layers)
+    const foliageColor = new THREE.Color().setHSL(0.3, 0.6 + Math.random() * 0.2, 0.4);
 
-    // Initial scale based on stage
-    plantGroup.scale.setScalar(scale);
-
-    this.scene.add(plantGroup);
-    this.plantMeshes.set(plant.id, plantGroup);
-
-    // Grow animation when first created
-    if (plant.stage === GrowthStages.SEED) {
-      plantGroup.scale.setScalar(0);
-      anime({
-        targets: plantGroup.scale,
-        x: scale,
-        y: scale,
-        z: scale,
-        duration: 1000,
-        easing: 'easeOutElastic(1, 0.5)'
+    for (let i = 0; i < 3; i++) {
+      const foliageGeo = new THREE.SphereGeometry(0.6 - i * 0.15, 12, 12);
+      const foliageMat = new THREE.MeshStandardMaterial({
+        color: foliageColor,
+        roughness: 0.8
       });
+      const foliage = new THREE.Mesh(foliageGeo, foliageMat);
+      foliage.position.y = 1.8 + i * 0.4;
+      foliage.scale.set(1, 0.9, 1);
+      treeGroup.add(foliage);
     }
 
-    // Gentle sway animation
-    anime({
-      targets: plantGroup.rotation,
+    this.scene.add(treeGroup);
+    this.plants.push({ group: treeGroup, type: 'tree' });
+
+    // Grow animation
+    treeGroup.scale.set(0, 0, 0);
+
+    gsap.to(treeGroup.scale, {
+      x: 1,
+      y: 1,
+      z: 1,
+      duration: 5,
+      ease: 'elastic.out(1, 0.4)'
+    });
+
+    // Gentle sway
+    gsap.to(treeGroup.rotation, {
       z: (Math.random() - 0.5) * 0.1,
-      duration: 2000 + Math.random() * 2000,
-      direction: 'alternate',
-      loop: true,
-      easing: 'easeInOutSine'
+      duration: 3 + Math.random() * 2,
+      yoyo: true,
+      repeat: -1,
+      ease: 'sine.inOut'
     });
 
-    return plantGroup;
+    this.playGrowthSound(0.7);
   }
 
-  updatePlantGeometry(plantGroup, plant, color) {
-    // Clear existing geometry
-    while (plantGroup.children.length > 0) {
-      const child = plantGroup.children[0];
-      plantGroup.remove(child);
-      if (child.geometry) child.geometry.dispose();
-      if (child.material) {
-        if (Array.isArray(child.material)) {
-          child.material.forEach(m => m.dispose());
-        } else {
-          child.material.dispose();
-        }
-      }
+  createBush(position) {
+    const bushGroup = new THREE.Group();
+    bushGroup.position.copy(position);
+    bushGroup.position.y = -2.3;
+
+    const bushColor = new THREE.Color().setHSL(0.28 + Math.random() * 0.05, 0.7, 0.35);
+
+    // Multiple spheres to make bushy shape
+    for (let i = 0; i < 5; i++) {
+      const bushGeo = new THREE.SphereGeometry(0.25 + Math.random() * 0.15, 12, 12);
+      const bushMat = new THREE.MeshStandardMaterial({
+        color: bushColor,
+        roughness: 0.85
+      });
+      const bush = new THREE.Mesh(bushGeo, bushMat);
+
+      const angle = (i / 5) * Math.PI * 2;
+      const offset = 0.2 + Math.random() * 0.1;
+
+      bush.position.set(
+        Math.cos(angle) * offset,
+        0.2 + Math.random() * 0.2,
+        Math.sin(angle) * offset
+      );
+
+      bushGroup.add(bush);
     }
 
-    const threeColor = new THREE.Color(color);
+    this.scene.add(bushGroup);
+    this.plants.push({ group: bushGroup, type: 'bush' });
 
-    // Create geometry based on stage
-    switch (plant.stage) {
-      case GrowthStages.SEED:
-        // Small brown sphere
-        const seedGeo = new THREE.SphereGeometry(0.1, 8, 8);
-        const seedMat = new THREE.MeshStandardMaterial({
-          color: 0x8b6914,
-          roughness: 0.9
-        });
-        const seed = new THREE.Mesh(seedGeo, seedMat);
-        seed.position.y = 0.05;
-        plantGroup.add(seed);
-        break;
+    // Grow animation
+    bushGroup.scale.set(0, 0, 0);
 
-      case GrowthStages.SPROUT:
-        // Small green sprout
-        const sproutGeo = new THREE.ConeGeometry(0.05, 0.3, 6);
-        const sproutMat = new THREE.MeshStandardMaterial({
-          color: 0x4CAF50,
-          roughness: 0.8
-        });
-        const sprout = new THREE.Mesh(sproutGeo, sproutMat);
-        sprout.position.y = 0.15;
-        plantGroup.add(sprout);
-        break;
-
-      case GrowthStages.SMALL:
-        // Small flower bud
-        const budGeo = new THREE.SphereGeometry(0.15, 12, 12);
-        const budMat = new THREE.MeshStandardMaterial({
-          color: threeColor,
-          roughness: 0.7,
-          metalness: 0.1
-        });
-        const bud = new THREE.Mesh(budGeo, budMat);
-        bud.position.y = 0.3;
-        plantGroup.add(bud);
-
-        // Stem
-        const stemGeo = new THREE.CylinderGeometry(0.03, 0.03, 0.3, 6);
-        const stemMat = new THREE.MeshStandardMaterial({
-          color: 0x4CAF50,
-          roughness: 0.8
-        });
-        const stem = new THREE.Mesh(stemGeo, stemMat);
-        stem.position.y = 0.15;
-        plantGroup.add(stem);
-        break;
-
-      case GrowthStages.MEDIUM:
-        // Growing flower with petals forming
-        const petalCount = 5;
-        for (let i = 0; i < petalCount; i++) {
-          const angle = (i / petalCount) * Math.PI * 2;
-          const petalGeo = new THREE.SphereGeometry(0.2, 12, 12);
-          petalGeo.scale(1.3, 0.3, 0.6);
-
-          const petalMat = new THREE.MeshStandardMaterial({
-            color: threeColor,
-            transparent: true,
-            opacity: 0.85,
-            roughness: 0.7,
-            metalness: 0.1,
-            side: THREE.DoubleSide
-          });
-
-          const petal = new THREE.Mesh(petalGeo, petalMat);
-          petal.position.x = Math.cos(angle) * 0.25;
-          petal.position.z = Math.sin(angle) * 0.25;
-          petal.position.y = 0.5;
-          petal.rotation.y = -angle;
-          petal.rotation.x = Math.PI / 6;
-
-          plantGroup.add(petal);
-        }
-
-        // Center
-        const centerGeo = new THREE.SphereGeometry(0.12, 12, 12);
-        const centerMat = new THREE.MeshStandardMaterial({
-          color: 0xffd700,
-          roughness: 0.4,
-          metalness: 0.2
-        });
-        const center = new THREE.Mesh(centerGeo, centerMat);
-        center.position.y = 0.5;
-        plantGroup.add(center);
-
-        // Longer stem
-        const stemGeo2 = new THREE.CylinderGeometry(0.04, 0.04, 0.5, 6);
-        const stemMat2 = new THREE.MeshStandardMaterial({
-          color: 0x4CAF50,
-          roughness: 0.8
-        });
-        const stem2 = new THREE.Mesh(stemGeo2, stemMat2);
-        stem2.position.y = 0.25;
-        plantGroup.add(stem2);
-        break;
-
-      case GrowthStages.MATURE:
-        // Full flower with glow
-        const maturePetalCount = 6;
-        for (let i = 0; i < maturePetalCount; i++) {
-          const angle = (i / maturePetalCount) * Math.PI * 2;
-          const petalGeo = new THREE.SphereGeometry(0.25, 16, 16);
-          petalGeo.scale(1.5, 0.3, 0.8);
-
-          const petalMat = new THREE.MeshStandardMaterial({
-            color: threeColor,
-            transparent: true,
-            opacity: 0.85,
-            roughness: 0.7,
-            metalness: 0.1,
-            side: THREE.DoubleSide,
-            emissive: threeColor,
-            emissiveIntensity: 0.2
-          });
-
-          const petal = new THREE.Mesh(petalGeo, petalMat);
-          petal.position.x = Math.cos(angle) * 0.35;
-          petal.position.z = Math.sin(angle) * 0.35;
-          petal.position.y = 0.6;
-          petal.rotation.y = -angle;
-          petal.rotation.x = Math.PI / 6;
-
-          plantGroup.add(petal);
-        }
-
-        // Bright center
-        const matureCenterGeo = new THREE.SphereGeometry(0.15, 16, 16);
-        const matureCenterMat = new THREE.MeshStandardMaterial({
-          color: 0xffd700,
-          roughness: 0.4,
-          metalness: 0.2,
-          emissive: 0xffd700,
-          emissiveIntensity: 0.5
-        });
-        const matureCenter = new THREE.Mesh(matureCenterGeo, matureCenterMat);
-        matureCenter.position.y = 0.65;
-        plantGroup.add(matureCenter);
-
-        // Glow effect
-        const glowGeo = new THREE.SphereGeometry(0.7, 16, 16);
-        const glowMat = new THREE.MeshBasicMaterial({
-          color: threeColor,
-          transparent: true,
-          opacity: 0.3,
-          blending: THREE.AdditiveBlending
-        });
-        const glow = new THREE.Mesh(glowGeo, glowMat);
-        glow.position.y = 0.6;
-        plantGroup.add(glow);
-        plantGroup.userData.glow = glow;
-
-        // Pulsing glow animation
-        anime({
-          targets: glowMat,
-          opacity: 0.5,
-          duration: 2000,
-          direction: 'alternate',
-          loop: true,
-          easing: 'easeInOutSine'
-        });
-
-        // Full stem
-        const stemGeo3 = new THREE.CylinderGeometry(0.05, 0.05, 0.6, 8);
-        const stemMat3 = new THREE.MeshStandardMaterial({
-          color: 0x4CAF50,
-          roughness: 0.8
-        });
-        const stem3 = new THREE.Mesh(stemGeo3, stemMat3);
-        stem3.position.y = 0.3;
-        plantGroup.add(stem3);
-
-        // Leaves
-        for (let i = 0; i < 2; i++) {
-          const leafGeo = new THREE.SphereGeometry(0.15, 12, 12);
-          leafGeo.scale(2, 0.1, 1);
-          const leafMat = new THREE.MeshStandardMaterial({
-            color: 0x4CAF50,
-            roughness: 0.8,
-            side: THREE.DoubleSide
-          });
-          const leaf = new THREE.Mesh(leafGeo, leafMat);
-          leaf.position.y = 0.2 + i * 0.15;
-          leaf.position.x = (i % 2 === 0 ? 0.2 : -0.2);
-          leaf.rotation.z = (i % 2 === 0 ? -0.5 : 0.5);
-          plantGroup.add(leaf);
-        }
-        break;
-    }
-  }
-
-  removePlantMesh(plantId) {
-    const mesh = this.plantMeshes.get(plantId);
-    if (!mesh) return;
-
-    // Harvest animation
-    anime({
-      targets: mesh.scale,
-      x: 0,
-      y: 0,
-      z: 0,
-      duration: 500,
-      easing: 'easeInBack',
-      complete: () => {
-        this.scene.remove(mesh);
-
-        // Dispose of all geometries and materials
-        mesh.traverse(child => {
-          if (child.geometry) child.geometry.dispose();
-          if (child.material) {
-            if (Array.isArray(child.material)) {
-              child.material.forEach(m => m.dispose());
-            } else {
-              child.material.dispose();
-            }
-          }
-        });
-
-        this.plantMeshes.delete(plantId);
-      }
+    gsap.to(bushGroup.scale, {
+      x: 1,
+      y: 1,
+      z: 1,
+      duration: 4,
+      ease: 'elastic.out(1, 0.5)'
     });
 
-    // Create harvest sparkles
-    const position = mesh.position.clone();
-    const count = 15;
+    // Gentle sway
+    gsap.to(bushGroup.rotation, {
+      y: (Math.random() - 0.5) * 0.2,
+      duration: 2.5 + Math.random() * 1.5,
+      yoyo: true,
+      repeat: -1,
+      ease: 'sine.inOut'
+    });
 
-    for (let i = 0; i < count; i++) {
-      const geometry = new THREE.SphereGeometry(0.08, 8, 8);
-      const material = new THREE.MeshBasicMaterial({
-        color: 0xFFD700,
-        transparent: true,
-        opacity: 1
-      });
-      const particle = new THREE.Mesh(geometry, material);
-
-      particle.position.copy(position);
-      particle.position.y += 0.5;
-
-      this.scene.add(particle);
-
-      const angle = Math.random() * Math.PI * 2;
-      const radius = 0.5 + Math.random() * 0.5;
-
-      anime({
-        targets: particle.position,
-        x: position.x + Math.cos(angle) * radius,
-        y: position.y + 1 + Math.random() * 0.5,
-        z: position.z + Math.sin(angle) * radius,
-        duration: 800,
-        easing: 'easeOutQuad',
-        complete: () => {
-          this.scene.remove(particle);
-          geometry.dispose();
-          material.dispose();
-        }
-      });
-
-      anime({
-        targets: particle.material,
-        opacity: 0,
-        duration: 800,
-        easing: 'linear'
-      });
-    }
+    this.playGrowthSound(0.8);
   }
 
   // Show a poem line
@@ -2252,9 +1396,8 @@ export class EternalGarden {
     this.gameTime = (this.gameTime + dt * this.timeScale) % 24;
     this.updateSkyAndLighting(this.gameTime);
 
-    // Update simulator (plant growth)
-    this.simulator.update(dt);
-    this.updatePlantGrowth();
+    // Process seed queue
+    this.processSeedQueue(tNow);
 
     // Update ground shader
     if (this.ground) {
@@ -2266,66 +1409,6 @@ export class EternalGarden {
       this.stars.material.uniforms.time.value = this.realTime;
       this.stars.rotation.y += 0.0001;
     }
-
-    // Animate atmospheric particles
-    if (this.atmosphericParticleSystem) {
-      const posArray = this.atmosphericParticleSystem.geometry.attributes.position.array;
-      const velArray = this.atmosphericParticleSystem.geometry.attributes.velocity.array;
-
-      for (let i = 0; i < posArray.length / 3; i++) {
-        const idx = i * 3;
-
-        // Apply velocity
-        posArray[idx] += velArray[idx];
-        posArray[idx + 1] += velArray[idx + 1];
-        posArray[idx + 2] += velArray[idx + 2];
-
-        // Wrap around
-        if (posArray[idx + 1] > 15) {
-          posArray[idx + 1] = 0;
-        }
-        if (Math.abs(posArray[idx]) > 20) {
-          posArray[idx] = -posArray[idx];
-        }
-        if (Math.abs(posArray[idx + 2]) > 20) {
-          posArray[idx + 2] = -posArray[idx + 2];
-        }
-      }
-
-      this.atmosphericParticleSystem.geometry.attributes.position.needsUpdate = true;
-      this.atmosphericParticleSystem.material.uniforms.time.value = this.realTime;
-
-      // Update day/night phase for atmospheric particles
-      const normalized = (Math.sin((this.gameTime / 24) * Math.PI * 2 - Math.PI / 2) + 1) / 2;
-      this.atmosphericParticleSystem.material.uniforms.dayNightPhase.value = normalized;
-    }
-
-    // Animate butterflies
-    this.butterflies.forEach(butterfly => {
-      const userData = butterfly.userData;
-
-      // Circular flight pattern
-      userData.flyAngle += dt * userData.flySpeed;
-
-      butterfly.position.x = Math.cos(userData.flyAngle) * userData.flyRadius;
-      butterfly.position.z = Math.sin(userData.flyAngle) * userData.flyRadius;
-
-      // Bob up and down
-      userData.bobPhase += dt * 2;
-      butterfly.position.y = 2.5 + Math.sin(userData.bobPhase) * 0.5;
-
-      // Face direction of movement
-      butterfly.rotation.y = -userData.flyAngle + Math.PI / 2;
-
-      // Flap wings
-      if (userData.wings) {
-        userData.wingPhase += dt * 10;
-        const flapAngle = Math.sin(userData.wingPhase) * 0.5;
-
-        userData.wings[0].rotation.y = Math.PI * 0.3 + flapAngle;
-        userData.wings[1].rotation.y = -Math.PI * 0.3 - flapAngle;
-      }
-    });
 
     // Animate fireflies
     if (this.fireflySystem) {
@@ -2728,6 +1811,7 @@ const styles = `
 .garden-canvas-container {
   flex: 1;
   position: relative;
+  cursor: crosshair;
   touch-action: none;
 }
 
@@ -2750,201 +1834,6 @@ const styles = `
   font-weight: 300;
   color: rgba(255, 255, 255, 0.9);
   letter-spacing: 0.5px;
-}
-
-/* Resources Panel */
-.garden-resources-panel {
-  position: absolute;
-  top: 1rem;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  padding: 0.75rem 1.25rem;
-  background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(15px);
-  border-radius: 30px;
-  border: 2px solid rgba(255, 255, 255, 0.2);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
-  z-index: 50;
-}
-
-.skill-display {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding-right: 1rem;
-  border-right: 1px solid rgba(255, 255, 255, 0.2);
-}
-
-.skill-icon {
-  font-size: 1.5rem;
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
-}
-
-.skill-info {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
-.skill-level {
-  font-family: 'Montserrat', sans-serif;
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: #fff;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-}
-
-.xp-bar {
-  width: 80px;
-  height: 6px;
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 3px;
-  overflow: hidden;
-}
-
-.xp-fill {
-  height: 100%;
-  background: linear-gradient(90deg, #4CAF50, #8BC34A);
-  border-radius: 3px;
-  transition: width 0.5s ease;
-  box-shadow: 0 0 8px rgba(76, 175, 80, 0.6);
-}
-
-.resources {
-  display: flex;
-  gap: 1rem;
-}
-
-.resource {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-}
-
-.resource-icon {
-  font-size: 1.2rem;
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
-}
-
-.resource-value {
-  font-family: 'Montserrat', sans-serif;
-  font-size: 1rem;
-  font-weight: 600;
-  color: #fff;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-  min-width: 24px;
-  text-align: center;
-}
-
-/* Action Buttons */
-.garden-actions {
-  position: absolute;
-  bottom: 2rem;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  gap: 0.75rem;
-  padding: 0.75rem;
-  background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(15px);
-  border-radius: 40px;
-  border: 2px solid rgba(255, 255, 255, 0.2);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
-  z-index: 50;
-}
-
-.action-btn {
-  width: 56px;
-  height: 56px;
-  background: rgba(255, 255, 255, 0.1);
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  border-radius: 50%;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.3s ease;
-  position: relative;
-}
-
-.action-btn:hover {
-  background: rgba(255, 255, 255, 0.2);
-  border-color: rgba(255, 255, 255, 0.5);
-  transform: scale(1.1);
-}
-
-.action-btn:active {
-  transform: scale(0.95);
-}
-
-.action-btn.active {
-  background: rgba(76, 175, 80, 0.4);
-  border-color: rgba(76, 175, 80, 0.8);
-  box-shadow: 0 0 20px rgba(76, 175, 80, 0.6);
-}
-
-.action-btn.active::after {
-  content: '';
-  position: absolute;
-  inset: -4px;
-  border: 2px solid rgba(76, 175, 80, 0.6);
-  border-radius: 50%;
-  animation: pulse 2s ease-in-out infinite;
-}
-
-@keyframes pulse {
-  0%, 100% {
-    opacity: 1;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 0.5;
-    transform: scale(1.05);
-  }
-}
-
-.action-icon {
-  font-size: 1.8rem;
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
-}
-
-/* Info Display */
-.garden-info {
-  position: absolute;
-  bottom: 8rem;
-  left: 50%;
-  transform: translateX(-50%);
-  padding: 0.75rem 1.5rem;
-  background: rgba(0, 0, 0, 0.75);
-  backdrop-filter: blur(15px);
-  border-radius: 25px;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
-  font-family: 'Montserrat', sans-serif;
-  font-size: 0.95rem;
-  font-weight: 500;
-  color: #fff;
-  text-align: center;
-  opacity: 0;
-  transition: opacity 0.3s ease;
-  pointer-events: none;
-  z-index: 50;
-  max-width: 300px;
-}
-
-.garden-info.success {
-  border-color: rgba(76, 175, 80, 0.6);
-  background: rgba(76, 175, 80, 0.2);
-  box-shadow: 0 0 20px rgba(76, 175, 80, 0.4);
-}
-
-.garden-info.error {
-  border-color: rgba(244, 67, 54, 0.6);
-  background: rgba(244, 67, 54, 0.2);
-  box-shadow: 0 0 20px rgba(244, 67, 54, 0.4);
 }
 
 .garden-poem {
@@ -2983,47 +1872,6 @@ const styles = `
 
   .current-time {
     font-size: 0.75rem;
-  }
-
-  .garden-resources-panel {
-    flex-direction: column;
-    gap: 0.5rem;
-    padding: 0.5rem 1rem;
-    top: 3.5rem;
-    left: 1rem;
-    transform: none;
-  }
-
-  .skill-display {
-    padding-right: 0;
-    padding-bottom: 0.5rem;
-    border-right: none;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-  }
-
-  .resources {
-    gap: 0.75rem;
-  }
-
-  .garden-actions {
-    gap: 0.5rem;
-    padding: 0.5rem;
-    bottom: 1rem;
-  }
-
-  .action-btn {
-    width: 48px;
-    height: 48px;
-  }
-
-  .action-icon {
-    font-size: 1.5rem;
-  }
-
-  .garden-info {
-    bottom: 6rem;
-    max-width: 85%;
-    font-size: 0.85rem;
   }
 
   .garden-poem {

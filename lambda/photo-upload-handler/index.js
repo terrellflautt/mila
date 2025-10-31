@@ -1,7 +1,11 @@
 const { S3Client, PutObjectCommand, ListObjectsV2Command } = require('@aws-sdk/client-s3');
+const { DynamoDBClient } = require('@aws-sdk/client-dynamodb');
+const { DynamoDBDocumentClient, PutCommand, GetCommand, UpdateCommand } = require('@aws-sdk/lib-dynamodb');
 const crypto = require('crypto');
 
 const s3Client = new S3Client({ region: process.env.AWS_REGION || 'us-east-1' });
+const dynamoClient = new DynamoDBClient({ region: process.env.AWS_REGION || 'us-east-1' });
+const docClient = DynamoDBDocumentClient.from(dynamoClient);
 
 exports.handler = async (event) => {
   const headers = {
@@ -19,9 +23,12 @@ exports.handler = async (event) => {
   const method = event.requestContext?.http?.method || event.httpMethod || 'GET';
 
   try {
-    // GET - List all photos
+    // Get userId from headers or query params (defaulting to 'mila' for now)
+    const userId = event.headers?.['x-user-id'] || event.queryStringParameters?.userId || 'mila';
+
+    // GET - List all photos from DynamoDB
     if (method === 'GET') {
-      const photos = await listPhotos();
+      const photos = await getPhotosFromDynamoDB(userId);
       return {
         statusCode: 200,
         headers,
@@ -41,14 +48,14 @@ exports.handler = async (event) => {
         };
       }
 
-      const photoUrl = await uploadPhoto(body.photo);
+      const result = await uploadPhoto(body.photo, userId);
 
       return {
         statusCode: 200,
         headers,
         body: JSON.stringify({
           success: true,
-          url: photoUrl,
+          ...result,
           message: 'Photo uploaded successfully'
         })
       };
@@ -74,10 +81,11 @@ exports.handler = async (event) => {
 };
 
 /**
- * Upload photo to S3
+ * Upload photo to S3 and save metadata to DynamoDB
  */
-async function uploadPhoto(photo) {
-  const bucketName = process.env.BUCKET_NAME;
+async function uploadPhoto(photo, userId) {
+  const bucketName = process.env.GALLERY_BUCKET_NAME;
+  const galleryTableName = process.env.GALLERY_TABLE_NAME;
 
   // Decode base64 photo data
   const base64Data = photo.data.replace(/^data:image\/\w+;base64,/, '');
@@ -90,7 +98,11 @@ async function uploadPhoto(photo) {
   const timestamp = Date.now();
   const randomId = crypto.randomBytes(8).toString('hex');
   const extension = contentType.split('/')[1] || 'jpg';
-  const filename = `gallery/uploads/${timestamp}-${randomId}.${extension}`;
+  const photoId = `${timestamp}-${randomId}`;
+
+  // TODO: In future, create thumbnail version here with sharp
+  // For now, just upload the full image
+  const filename = `uploads/${photoId}.${extension}`;
 
   // Upload to S3
   await s3Client.send(new PutObjectCommand({
@@ -99,40 +111,60 @@ async function uploadPhoto(photo) {
     Body: buffer,
     ContentType: contentType,
     CacheControl: 'max-age=31536000',  // 1 year
-    Metadata: {
-      caption: photo.caption || '',
-      uploadedAt: new Date().toISOString()
+  }));
+
+  // Construct URLs
+  const photoUrl = `https://${bucketName}.s3.amazonaws.com/${filename}`;
+
+  // Create metadata object
+  const photoMetadata = {
+    photoId,
+    url: photoUrl,
+    thumbnailUrl: photoUrl, // TODO: Update when we add thumbnail generation
+    caption: photo.caption || '',
+    uploadedAt: new Date().toISOString(),
+    s3Key: filename
+  };
+
+  // Get existing photos from DynamoDB
+  const existingData = await docClient.send(new GetCommand({
+    TableName: galleryTableName,
+    Key: { userId }
+  }));
+
+  const existingPhotos = existingData.Item?.photos || [];
+  const updatedPhotos = [...existingPhotos, photoMetadata];
+
+  // Save to DynamoDB
+  await docClient.send(new PutCommand({
+    TableName: galleryTableName,
+    Item: {
+      userId,
+      photos: updatedPhotos,
+      updatedAt: new Date().toISOString()
     }
   }));
 
-  // Return CloudFront URL
-  const cloudFrontDomain = process.env.CLOUDFRONT_DOMAIN;
-  return `https://${cloudFrontDomain}/${filename}`;
+  return photoMetadata;
 }
 
 /**
- * List all uploaded photos
+ * Get all photos for a user from DynamoDB
  */
-async function listPhotos() {
-  const bucketName = process.env.BUCKET_NAME;
-  const cloudFrontDomain = process.env.CLOUDFRONT_DOMAIN;
+async function getPhotosFromDynamoDB(userId) {
+  const galleryTableName = process.env.GALLERY_TABLE_NAME;
 
-  const response = await s3Client.send(new ListObjectsV2Command({
-    Bucket: bucketName,
-    Prefix: 'gallery/uploads/'
+  const result = await docClient.send(new GetCommand({
+    TableName: galleryTableName,
+    Key: { userId }
   }));
 
-  if (!response.Contents) {
+  if (!result.Item || !result.Item.photos) {
     return [];
   }
 
-  return response.Contents
-    .filter(item => item.Key !== 'gallery/uploads/') // Skip folder marker
-    .map(item => ({
-      url: `https://${cloudFrontDomain}/${item.Key}`,
-      key: item.Key,
-      uploadedAt: item.LastModified,
-      size: item.Size
-    }))
-    .sort((a, b) => new Date(b.uploadedAt) - new Date(a.uploadedAt)); // Newest first
+  // Return photos sorted by newest first
+  return result.Item.photos.sort((a, b) =>
+    new Date(b.uploadedAt) - new Date(a.uploadedAt)
+  );
 }

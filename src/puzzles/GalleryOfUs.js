@@ -39,19 +39,15 @@ export class GalleryOfUs {
       localPhotos = [
         {
           type: 'uploaded',
-          url: '/gallery/tk-selfie.jpg',
-          caption: 'The beginning of our story...',
-          isDefault: true
-        },
-        {
-          type: 'uploaded',
-          url: '/gallery/tk1-first-date.jpg',
+          url: '/gallery/tk1-optimized.jpg',
+          thumbnailUrl: '/gallery/tk1-thumb.jpg',
           caption: 'Our first date together 💕',
           isDefault: true
         },
         {
           type: 'uploaded',
-          url: '/gallery/tk2-first-date.jpg',
+          url: '/gallery/tk2-optimized.jpg',
+          thumbnailUrl: '/gallery/tk2-thumb.jpg',
           caption: 'Making memories from day one ✨',
           isDefault: true
         }
@@ -530,10 +526,10 @@ export class GalleryOfUs {
       `;
     } else {
       return `
-        <div class="photo-frame" data-index="${index}">
+        <div class="photo-frame" data-index="${index}" data-full-url="${photo.url}">
           <div class="photo-content">
             <div class="photo-blur" data-tint="${tint}"></div>
-            <img class="photo-image" src="${photo.url}" alt="Memory ${index + 1}">
+            <img class="photo-image" src="${photo.thumbnailUrl || photo.url}" alt="Memory ${index + 1}" loading="lazy">
             ${photo.caption ? `<div class="photo-caption">${photo.caption}</div>` : ''}
           </div>
         </div>
@@ -564,6 +560,17 @@ export class GalleryOfUs {
 
     exitBtn?.addEventListener('click', () => {
       this.hide();
+    });
+
+    // Add click handlers for viewing full images
+    const photoFrames = this.element.querySelectorAll('.photo-frame');
+    photoFrames.forEach(frame => {
+      const fullUrl = frame.dataset.fullUrl;
+      if (fullUrl) {
+        frame.addEventListener('click', () => {
+          this.openFullImage(fullUrl);
+        });
+      }
     });
   }
 
@@ -665,6 +672,152 @@ export class GalleryOfUs {
   }
 
   /**
+   * Open full image in lightbox
+   */
+  openFullImage(imageUrl) {
+    // Create lightbox overlay
+    const lightbox = document.createElement('div');
+    lightbox.className = 'image-lightbox';
+    lightbox.innerHTML = `
+      <div class="lightbox-backdrop"></div>
+      <div class="lightbox-content">
+        <button class="lightbox-close" title="Close">✕</button>
+        <img class="lightbox-image" src="${imageUrl}" alt="Full size memory">
+      </div>
+      <style>
+        .image-lightbox {
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100vh;
+          height: 100dvh;
+          z-index: 2000;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 2rem;
+          padding: max(2rem, env(safe-area-inset-top)) max(2rem, env(safe-area-inset-right)) max(2rem, env(safe-area-inset-bottom)) max(2rem, env(safe-area-inset-left));
+        }
+
+        .lightbox-backdrop {
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background: rgba(0, 0, 0, 0.95);
+          cursor: pointer;
+        }
+
+        .lightbox-content {
+          position: relative;
+          max-width: 90%;
+          max-height: 90%;
+          z-index: 1;
+        }
+
+        .lightbox-image {
+          max-width: 100%;
+          max-height: 90vh;
+          max-height: 90dvh;
+          width: auto;
+          height: auto;
+          border-radius: 12px;
+          box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
+          border: 2px solid rgba(255, 182, 193, 0.3);
+        }
+
+        .lightbox-close {
+          position: absolute;
+          top: -50px;
+          right: 0;
+          width: 44px;
+          height: 44px;
+          background: rgba(255, 107, 157, 0.9);
+          border: 2px solid rgba(255, 182, 193, 0.6);
+          border-radius: 50%;
+          color: white;
+          font-size: 1.5rem;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 10;
+          transition: all 0.3s ease;
+          line-height: 1;
+          padding: 0;
+        }
+
+        .lightbox-close:hover {
+          background: rgba(255, 107, 157, 1);
+          transform: scale(1.1);
+          box-shadow: 0 4px 20px rgba(255, 107, 157, 0.6);
+        }
+
+        @media (max-width: 768px) {
+          .image-lightbox {
+            padding: max(1rem, env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right)) max(1rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
+          }
+
+          .lightbox-content {
+            max-width: 95%;
+            max-height: 95%;
+          }
+
+          .lightbox-image {
+            max-height: 85vh;
+            max-height: 85dvh;
+          }
+
+          .lightbox-close {
+            top: max(-50px, calc(-1 * env(safe-area-inset-top) - 50px));
+            width: 40px;
+            height: 40px;
+            font-size: 1.25rem;
+          }
+        }
+      </style>
+    `;
+
+    document.body.appendChild(lightbox);
+
+    // Animate in
+    gsap.fromTo(lightbox,
+      { opacity: 0 },
+      { opacity: 1, duration: 0.3, ease: 'power2.out' }
+    );
+
+    const image = lightbox.querySelector('.lightbox-image');
+    gsap.fromTo(image,
+      { scale: 0.9, opacity: 0 },
+      { scale: 1, opacity: 1, duration: 0.4, delay: 0.1, ease: 'back.out(1.5)' }
+    );
+
+    // Close handlers
+    const closeLightbox = () => {
+      gsap.to(lightbox, {
+        opacity: 0,
+        duration: 0.3,
+        ease: 'power2.in',
+        onComplete: () => lightbox.remove()
+      });
+    };
+
+    lightbox.querySelector('.lightbox-close').addEventListener('click', closeLightbox);
+    lightbox.querySelector('.lightbox-backdrop').addEventListener('click', closeLightbox);
+
+    // ESC key to close
+    const handleEsc = (e) => {
+      if (e.key === 'Escape') {
+        closeLightbox();
+        document.removeEventListener('keydown', handleEsc);
+      }
+    };
+    document.addEventListener('keydown', handleEsc);
+  }
+
+  /**
    * Refresh the photo grid after upload
    */
   refreshPhotoGrid() {
@@ -676,6 +829,14 @@ export class GalleryOfUs {
     // Animate new photos in
     const frames = grid.querySelectorAll('.photo-frame');
     frames.forEach((frame, index) => {
+      // Add click handler for full image viewing
+      const fullUrl = frame.dataset.fullUrl;
+      if (fullUrl) {
+        frame.addEventListener('click', () => {
+          this.openFullImage(fullUrl);
+        });
+      }
+
       gsap.fromTo(frame,
         { opacity: 0, scale: 0.9 },
         {
@@ -720,6 +881,17 @@ export class GalleryOfUs {
   revealPhoto(frame, index) {
     const blur = frame.querySelector('.photo-blur');
     const image = frame.querySelector('.photo-image');
+    const fullUrl = frame.dataset.fullUrl;
+
+    // Swap thumbnail for full-size image
+    if (image && fullUrl && image.src.includes('-thumb')) {
+      // Preload full image
+      const fullImg = new Image();
+      fullImg.onload = () => {
+        image.src = fullUrl;
+      };
+      fullImg.src = fullUrl;
+    }
 
     // Animate blur away
     if (blur) {

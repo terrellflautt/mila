@@ -588,4 +588,38 @@ export class BackgroundMusic {
       }, stepDuration);
     }
   }
+
+  /**
+   * Play a specific track by index
+   */
+  async playTrackByIndex(index) {
+    if (index < 0 || index >= this.tracks.length) {
+      console.error('Invalid track index:', index);
+      return;
+    }
+
+    this.currentTrackIndex = index;
+    const track = this.tracks[index];
+    const newTrack = this.createAudioElement(track.url);
+    newTrack.volume = 0;
+
+    try {
+      await newTrack.play();
+      this.fadeIn(newTrack);
+
+      if (this.currentTrack) {
+        this.fadeOut(this.currentTrack);
+      }
+
+      setTimeout(() => {
+        this.currentTrack = newTrack;
+        newTrack.addEventListener('ended', () => this.playNextTrack());
+        this.isPlaying = true;
+        this.onTrackChange();
+      }, this.crossfadeDuration / 2);
+
+    } catch (error) {
+      console.error('Failed to play track:', error);
+    }
+  }
 }
