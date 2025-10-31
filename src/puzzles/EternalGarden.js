@@ -7,6 +7,7 @@
 import * as THREE from 'three';
 import gsap from 'gsap';
 import confetti from 'canvas-confetti';
+import { GardenSimulator, GrowthStages } from '../utils/GardenSimulator.js';
 
 export class EternalGarden {
   constructor(onComplete) {
@@ -19,7 +20,7 @@ export class EternalGarden {
     this.particles = [];
     this.seeds = [];
     this.bloomCount = 0;
-    this.targetBlooms = 12;
+    this.targetBlooms = 20; // Increased to allow more planting
     this.isComplete = false;
     this.isAnimating = true; // Flag to control animation loop
     this.raycaster = new THREE.Raycaster();
@@ -32,6 +33,8 @@ export class EternalGarden {
     this.stars = [];
     this.shootingStars = [];
     this.ground = null; // Store ground mesh for uniform updates
+    this.simulator = new GardenSimulator(); // Garden skill system
+    this.plantMeshes = new Map(); // Track THREE.js meshes for each plant
   }
 
   /**
@@ -73,6 +76,8 @@ export class EternalGarden {
   createPuzzleElement() {
     const puzzle = document.createElement('div');
     puzzle.className = 'garden-puzzle';
+    const skillInfo = this.simulator.getSkillInfo();
+
     puzzle.innerHTML = `
       <div class="garden-container">
         <button class="garden-exit-btn" title="Return to Gallery">
@@ -81,7 +86,18 @@ export class EternalGarden {
 
         <div class="garden-header">
           <div class="puzzle-title">Eternal Garden</div>
-          <div class="puzzle-subtitle">Plant seeds with your presence, watch them grow into something lasting</div>
+          <div class="puzzle-subtitle">Cultivate your gardening skill, plant cooler and bigger flowers</div>
+        </div>
+
+        <div class="garden-skill-panel">
+          <div class="skill-level">
+            <span class="skill-icon">🌺</span>
+            <span class="skill-label">Level ${skillInfo.level}</span>
+          </div>
+          <div class="xp-bar-container">
+            <div class="xp-bar" style="width: ${skillInfo.progressToNext * 100}%"></div>
+          </div>
+          <div class="xp-text">${Math.floor(skillInfo.experience)} / ${skillInfo.xpNeeded} XP</div>
         </div>
 
         <div class="garden-canvas-container">
@@ -89,12 +105,12 @@ export class EternalGarden {
         </div>
 
         <div class="garden-progress">
-          <div class="progress-text">${this.bloomCount} of ${this.targetBlooms} flowers blooming</div>
+          <div class="progress-text">${this.bloomCount} flowers in garden • ${skillInfo.totalActions} plants grown</div>
         </div>
 
         <div class="garden-hint">
           <div class="hint-icon">🌱</div>
-          <div class="hint-text">Click to plant seeds... watch them grow</div>
+          <div class="hint-text">Click anywhere to plant • Flowers grow automatically</div>
         </div>
       </div>
     `;
@@ -357,7 +373,13 @@ export class EternalGarden {
    * Plant a seed at position
    */
   plantSeed(position) {
-    // Create seed
+    // Use simulator to create plant data
+    const result = this.simulator.plantSeed(position);
+    if (!result.success) return;
+
+    const plant = result.plant;
+
+    // Create seed mesh
     const geometry = new THREE.SphereGeometry(0.3, 8, 8);
     const material = new THREE.MeshBasicMaterial({
       color: 0x8b4513,
@@ -367,9 +389,11 @@ export class EternalGarden {
     const seed = new THREE.Mesh(geometry, material);
     seed.position.copy(position);
     seed.position.y = -4.7;
+    seed.userData.plantId = plant.id;
 
     this.scene.add(seed);
     this.seeds.push(seed);
+    this.plantMeshes.set(plant.id, seed);
 
     // Planting animation
     gsap.fromTo(seed.scale,
@@ -383,8 +407,8 @@ export class EternalGarden {
         onComplete: () => {
           // Grow into flower after delay
           setTimeout(() => {
-            this.growFlower(position, seed);
-          }, 500);
+            this.growFlower(plant, seed);
+          }, 800);
         }
       }
     );
@@ -394,6 +418,15 @@ export class EternalGarden {
 
     // Particle burst
     this.createPlantingBurst(position);
+
+    // Update UI
+    this.updateSkillPanel();
+    this.updateProgress();
+
+    // Check for level up
+    if (result.levelUp) {
+      this.showLevelUpNotification(result.newLevel);
+    }
   }
 
   /**
@@ -442,23 +475,33 @@ export class EternalGarden {
   /**
    * Grow a flower from seed
    */
-  growFlower(position, seed) {
+  growFlower(plant, seed) {
+    // Mark plant as fully grown in simulator
+    const position = plant.position;
+    const plantType = plant.type;
+    const size = plantType.size;
+    const hue = plantType.hue;
+
     const flowerGroup = new THREE.Group();
     flowerGroup.position.copy(position);
     flowerGroup.position.y = -4.7;
+    flowerGroup.userData.plantId = plant.id;
+    flowerGroup.userData.plantType = plantType;
 
-    // Stem
-    const stemGeometry = new THREE.CylinderGeometry(0.05, 0.08, 0, 8);
+    // Stem (taller for higher level plants)
+    const stemHeight = 3 + (size * 0.8);
+    const stemGeometry = new THREE.CylinderGeometry(0.05 * size, 0.08 * size, 0, 8);
     const stemMaterial = new THREE.MeshBasicMaterial({ color: 0x228b22 });
     const stem = new THREE.Mesh(stemGeometry, stemMaterial);
     stem.position.y = 0;
     flowerGroup.add(stem);
 
-    // Flower petals
-    const petalCount = 6;
-    const hue = Math.random();
+    // Flower petals (more for higher level plants)
+    const petalCount = 6 + Math.floor(size);
+    const petalSize = 0.4 * size;
+
     for (let i = 0; i < petalCount; i++) {
-      const petalGeometry = new THREE.CircleGeometry(0.5, 16);
+      const petalGeometry = new THREE.CircleGeometry(petalSize, 16);
       const petalMaterial = new THREE.MeshBasicMaterial({
         color: new THREE.Color().setHSL(hue, 0.8, 0.6),
         transparent: true,
@@ -468,8 +511,8 @@ export class EternalGarden {
       const petal = new THREE.Mesh(petalGeometry, petalMaterial);
 
       const angle = (i / petalCount) * Math.PI * 2;
-      petal.position.x = Math.cos(angle) * 0.4;
-      petal.position.z = Math.sin(angle) * 0.4;
+      petal.position.x = Math.cos(angle) * petalSize * 1.2;
+      petal.position.z = Math.sin(angle) * petalSize * 1.2;
       petal.position.y = 0;
       petal.rotation.x = Math.PI / 2;
 
@@ -477,8 +520,8 @@ export class EternalGarden {
       petal.userData.angle = angle;
     }
 
-    // Center
-    const centerGeometry = new THREE.CircleGeometry(0.3, 16);
+    // Center (bigger for higher level plants)
+    const centerGeometry = new THREE.CircleGeometry(0.25 * size, 16);
     const centerMaterial = new THREE.MeshBasicMaterial({
       color: 0xffd700,
       side: THREE.DoubleSide
@@ -490,6 +533,7 @@ export class EternalGarden {
 
     this.scene.add(flowerGroup);
     this.flowers.push(flowerGroup);
+    this.plantMeshes.set(plant.id, flowerGroup);
 
     // Remove seed
     gsap.to(seed.material, {
@@ -503,17 +547,23 @@ export class EternalGarden {
     });
 
     // Slow, peaceful growth animation
+    const growDuration = 3 + (size * 0.5);
     gsap.fromTo(stemGeometry.parameters,
       { height: 0 },
       {
-        height: 4,
-        duration: 4,
+        height: stemHeight,
+        duration: growDuration,
         ease: 'power1.inOut',
         onUpdate: () => {
           stemGeometry.dispose();
-          const newStem = new THREE.CylinderGeometry(0.05, 0.08, stemGeometry.parameters.height, 8);
+          const newStem = new THREE.CylinderGeometry(0.05 * size, 0.08 * size, stemGeometry.parameters.height, 8);
           stem.geometry = newStem;
           flowerGroup.position.y = -4.7 + stemGeometry.parameters.height / 2;
+        },
+        onComplete: () => {
+          // Mark as mature in simulator
+          this.simulator.growPlant(plant.id);
+          this.updateSkillPanel();
         }
       }
     );
@@ -527,30 +577,35 @@ export class EternalGarden {
           y: 1,
           z: 1,
           duration: 1,
-          delay: 1 + (i * 0.1),
+          delay: 0.8 + (i * 0.1),
           ease: 'back.out(2)'
         }
       );
     });
 
-    // Play growth sound
-    setTimeout(() => this.playGrowthSound(1 + hue), 1000);
+    // Play growth sound (pitch varies by plant type)
+    setTimeout(() => this.playGrowthSound(0.8 + (hue * 0.4)), 800);
 
     // Gentle sway animation
     gsap.to(flowerGroup.rotation, {
-      z: (Math.random() - 0.5) * 0.2,
+      z: (Math.random() - 0.5) * 0.15,
       duration: 2 + Math.random() * 2,
       yoyo: true,
       repeat: -1,
       ease: 'sine.inOut'
     });
 
+    // Add sparkle effect for high-level plants
+    if (size >= 2) {
+      this.addPlantSparkles(flowerGroup, hue);
+    }
+
     // Count bloom
     this.bloomCount++;
     this.updateProgress();
 
-    // Flamingos fly in halfway through (after 6 flowers)
-    if (this.bloomCount === 6 && !this.flamingosArrived) {
+    // Flamingos fly in after 10 flowers
+    if (this.bloomCount === 10 && !this.flamingosArrived) {
       this.flamingosArrived = true;
       setTimeout(() => {
         this.flamingosFlyIn();
@@ -571,21 +626,147 @@ export class EternalGarden {
     const progressText = this.element?.querySelector('.progress-text');
     if (!progressText) return;
 
-    progressText.textContent = `${this.bloomCount} of ${this.targetBlooms} flowers blooming`;
+    const skillInfo = this.simulator.getSkillInfo();
+    progressText.textContent = `${this.bloomCount} flowers in garden • ${skillInfo.totalActions} plants grown`;
 
     // Animate text with proper transform
     gsap.fromTo(progressText,
       {
-        transform: 'scale(1.2)',
+        transform: 'scale(1.05)',
         color: '#88ee88'
       },
       {
         transform: 'scale(1)',
         color: '',
-        duration: 0.5,
+        duration: 0.4,
         ease: 'back.out(2)'
       }
     );
+  }
+
+  /**
+   * Update skill panel UI
+   */
+  updateSkillPanel() {
+    const skillInfo = this.simulator.getSkillInfo();
+
+    const levelLabel = this.element?.querySelector('.skill-label');
+    if (levelLabel) {
+      levelLabel.textContent = `Level ${skillInfo.level}`;
+    }
+
+    const xpBar = this.element?.querySelector('.xp-bar');
+    if (xpBar) {
+      gsap.to(xpBar, {
+        width: `${skillInfo.progressToNext * 100}%`,
+        duration: 0.5,
+        ease: 'power2.out'
+      });
+    }
+
+    const xpText = this.element?.querySelector('.xp-text');
+    if (xpText) {
+      xpText.textContent = `${Math.floor(skillInfo.experience)} / ${skillInfo.xpNeeded} XP`;
+    }
+  }
+
+  /**
+   * Show level up notification
+   */
+  showLevelUpNotification(newLevel) {
+    const notification = document.createElement('div');
+    notification.className = 'level-up-notification';
+    notification.innerHTML = `
+      <div class="level-up-icon">🌺</div>
+      <div class="level-up-text">Level ${newLevel}!</div>
+      <div class="level-up-subtitle">New flowers unlocked</div>
+    `;
+
+    this.element.appendChild(notification);
+
+    // Animate in
+    gsap.fromTo(notification,
+      { opacity: 0, scale: 0.5, y: 50 },
+      {
+        opacity: 1,
+        scale: 1,
+        y: 0,
+        duration: 0.6,
+        ease: 'back.out(2)'
+      }
+    );
+
+    // Celebrate with confetti
+    confetti({
+      particleCount: 50,
+      spread: 60,
+      origin: { y: 0.5 },
+      colors: ['#FFB6C1', '#FF6B9D', '#88ee88', '#ffd700']
+    });
+
+    // Play sound
+    this.playGrowthSound(1.5);
+
+    // Remove after delay
+    setTimeout(() => {
+      gsap.to(notification, {
+        opacity: 0,
+        y: -50,
+        duration: 0.5,
+        ease: 'power2.in',
+        onComplete: () => notification.remove()
+      });
+    }, 3000);
+  }
+
+  /**
+   * Add sparkle effect for high-level plants
+   */
+  addPlantSparkles(flowerGroup, hue) {
+    const sparkleCount = 6;
+    for (let i = 0; i < sparkleCount; i++) {
+      const geometry = new THREE.SphereGeometry(0.08, 8, 8);
+      const material = new THREE.MeshBasicMaterial({
+        color: new THREE.Color().setHSL(hue, 1, 0.8),
+        transparent: true,
+        opacity: 0.8
+      });
+      const sparkle = new THREE.Mesh(geometry, material);
+
+      const angle = (i / sparkleCount) * Math.PI * 2;
+      const radius = 0.8;
+      sparkle.position.x = Math.cos(angle) * radius;
+      sparkle.position.z = Math.sin(angle) * radius;
+      sparkle.position.y = 1 + Math.random();
+
+      flowerGroup.add(sparkle);
+
+      // Floating orbit animation
+      gsap.to(sparkle.position, {
+        y: sparkle.position.y + 0.5,
+        duration: 2 + Math.random(),
+        yoyo: true,
+        repeat: -1,
+        ease: 'sine.inOut'
+      });
+
+      // Sparkle pulsing
+      gsap.to(sparkle.material, {
+        opacity: 0.2,
+        duration: 1 + Math.random(),
+        yoyo: true,
+        repeat: -1,
+        ease: 'sine.inOut'
+      });
+
+      // Rotation
+      gsap.to(sparkle.rotation, {
+        y: Math.PI * 2,
+        duration: 4,
+        repeat: -1,
+        ease: 'none'
+      });
+    }
   }
 
   /**
@@ -1132,7 +1313,96 @@ const styles = `
 
 .garden-header {
   text-align: center;
-  margin-bottom: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.garden-skill-panel {
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(15px);
+  border: 1px solid rgba(136, 238, 136, 0.3);
+  border-radius: 12px;
+  padding: 0.75rem 1.25rem;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.skill-level {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  white-space: nowrap;
+}
+
+.skill-icon {
+  font-size: 1.5rem;
+}
+
+.skill-label {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--color-primary, #FFF8F0);
+}
+
+.xp-bar-container {
+  flex: 1;
+  height: 12px;
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid rgba(136, 238, 136, 0.2);
+}
+
+.xp-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #88ee88 0%, #66dd66 100%);
+  border-radius: 6px;
+  transition: width 0.5s ease;
+  box-shadow: 0 0 10px rgba(136, 238, 136, 0.5);
+}
+
+.xp-text {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.7);
+  white-space: nowrap;
+}
+
+.level-up-notification {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(0, 0, 0, 0.9);
+  backdrop-filter: blur(20px);
+  border: 2px solid #88ee88;
+  border-radius: 20px;
+  padding: 2rem 3rem;
+  text-align: center;
+  z-index: 1000;
+  box-shadow: 0 0 40px rgba(136, 238, 136, 0.6);
+}
+
+.level-up-icon {
+  font-size: 3rem;
+  margin-bottom: 0.5rem;
+  animation: grow-pulse 1s ease-in-out infinite;
+}
+
+.level-up-text {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 2rem;
+  font-weight: 600;
+  color: #88ee88;
+  margin-bottom: 0.5rem;
+}
+
+.level-up-subtitle {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 1rem;
+  color: rgba(255, 255, 255, 0.8);
 }
 
 .garden-canvas-container {
