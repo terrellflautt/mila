@@ -21,6 +21,8 @@ export class MusicPlayer {
     this.animationId = null;
     this.isDragging = false;
     this.onVisualToggle = null; // Callback for visual experience toggle
+    this.onGardenToggle = null; // Callback for garden toggle
+    this.gardenUnlocked = false; // Will be set to true when Eternal Garden is completed
 
     // Bind music system callback
     this.music.onTrackChange = () => this.updateTrackDisplay();
@@ -106,12 +108,12 @@ export class MusicPlayer {
         </div>
       </div>
 
-      <!-- Audio Visualizer Canvas -->
-      <canvas class="player-visualizer" width="300" height="60"></canvas>
-
       <div class="player-expanded">
         <div class="player-controls-full">
           <button class="player-btn-full player-visual" title="Visual Experience">✨</button>
+          <button class="player-btn-full player-garden" title="Eternal Garden" ${this.gardenUnlocked ? '' : 'style="display:none;"'}>🌸</button>
+          <button class="player-btn-full player-tracklist" title="Track List">📜</button>
+          <button class="player-btn-full player-request" title="Request a Song">🎤</button>
           <button class="player-btn-full player-shuffle ${this.music.shuffle ? 'active' : ''}" title="Shuffle">🔀</button>
           <button class="player-btn-full player-volume" title="Volume">🔊</button>
         </div>
@@ -119,6 +121,56 @@ export class MusicPlayer {
         <div class="player-volume-slider" style="display: none;">
           <input type="range" class="volume-range" min="0" max="100" value="${this.music.volume * 100}" step="1">
           <div class="volume-percentage">${Math.round(this.music.volume * 100)}%</div>
+        </div>
+      </div>
+
+      <!-- Track List Modal -->
+      <div class="player-tracklist-modal" style="display: none;">
+        <div class="tracklist-header">
+          <h3>🎵 Your Playlist</h3>
+          <button class="tracklist-close">✕</button>
+        </div>
+        <div class="tracklist-content">
+          ${this.music.tracks.map((track, index) => `
+            <div class="track-item" data-track-index="${index}">
+              <div class="track-number">${index + 1}</div>
+              <div class="track-info">
+                <div class="track-name">${track.title}</div>
+                <div class="track-artist">${track.artist}</div>
+              </div>
+              <button class="track-play-btn">▶️</button>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+
+      <!-- Song Request Modal -->
+      <div class="player-request-modal" style="display: none;">
+        <div class="request-header">
+          <h3>🎤 Request a Song</h3>
+          <button class="request-close">✕</button>
+        </div>
+        <div class="request-content">
+          <form class="song-request-form">
+            <div class="form-group">
+              <label>Song Name</label>
+              <input type="text" name="songName" placeholder="Enter song title..." required>
+            </div>
+            <div class="form-group">
+              <label>Artist</label>
+              <input type="text" name="artist" placeholder="Enter artist name..." required>
+            </div>
+            <div class="form-group">
+              <label>Why do you love this song? (Optional)</label>
+              <textarea name="message" placeholder="Tell me why you want to hear this song..." rows="3"></textarea>
+            </div>
+            <button type="submit" class="request-submit-btn">Submit Request 💕</button>
+          </form>
+          <div class="request-success" style="display: none;">
+            <div class="success-icon">✓</div>
+            <p>Your song request has been sent!</p>
+            <p class="success-subtitle">I'll add it to the playlist soon 💕</p>
+          </div>
         </div>
       </div>
 
@@ -622,6 +674,246 @@ export class MusicPlayer {
         z-index: 1;
       }
 
+      /* Track List Modal */
+      .player-tracklist-modal, .player-request-modal {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: linear-gradient(135deg, rgba(15, 10, 20, 0.98), rgba(35, 20, 35, 0.98));
+        backdrop-filter: blur(30px);
+        border: 1.5px solid rgba(255, 182, 193, 0.4);
+        border-radius: 20px;
+        padding: 0;
+        max-width: 500px;
+        width: 90%;
+        max-height: 70vh;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8), 0 0 40px rgba(255, 182, 193, 0.3);
+        z-index: 10000;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .tracklist-header, .request-header {
+        padding: 20px;
+        border-bottom: 1px solid rgba(255, 182, 193, 0.25);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: rgba(255, 182, 193, 0.05);
+      }
+
+      .tracklist-header h3, .request-header h3 {
+        margin: 0;
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: rgba(255, 255, 255, 0.95);
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+      }
+
+      .tracklist-close, .request-close {
+        background: rgba(255, 182, 193, 0.2);
+        border: 1px solid rgba(255, 182, 193, 0.4);
+        border-radius: 50%;
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        font-size: 18px;
+        color: rgba(255, 255, 255, 0.9);
+        transition: all 0.2s ease;
+      }
+
+      .tracklist-close:hover, .request-close:hover {
+        background: rgba(255, 182, 193, 0.4);
+        transform: rotate(90deg) scale(1.1);
+      }
+
+      .tracklist-content {
+        padding: 10px;
+        overflow-y: auto;
+        max-height: calc(70vh - 80px);
+      }
+
+      .track-item {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        padding: 15px;
+        background: rgba(255, 182, 193, 0.05);
+        border: 1px solid rgba(255, 182, 193, 0.15);
+        border-radius: 12px;
+        margin-bottom: 8px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+      }
+
+      .track-item:hover {
+        background: rgba(255, 182, 193, 0.12);
+        border-color: rgba(255, 182, 193, 0.3);
+        transform: translateX(5px);
+      }
+
+      .track-number {
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: rgba(255, 182, 193, 0.8);
+        min-width: 30px;
+      }
+
+      .track-info {
+        flex: 1;
+        min-width: 0;
+      }
+
+      .track-name {
+        font-size: 1rem;
+        font-weight: 600;
+        color: rgba(255, 255, 255, 0.95);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .track-artist {
+        font-size: 0.85rem;
+        color: rgba(255, 182, 193, 0.7);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .track-play-btn {
+        background: rgba(255, 182, 193, 0.2);
+        border: 1px solid rgba(255, 182, 193, 0.4);
+        border-radius: 50%;
+        width: 36px;
+        height: 36px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        font-size: 14px;
+        transition: all 0.2s ease;
+      }
+
+      .track-play-btn:hover {
+        background: rgba(255, 182, 193, 0.4);
+        transform: scale(1.1);
+      }
+
+      /* Song Request Form */
+      .request-content {
+        padding: 20px;
+        overflow-y: auto;
+        flex: 1;
+        min-height: 0;
+      }
+
+      .song-request-form {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+      }
+
+      .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .form-group label {
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: rgba(255, 182, 193, 0.9);
+      }
+
+      .form-group input, .form-group textarea {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1.5px solid rgba(255, 182, 193, 0.3);
+        border-radius: 10px;
+        padding: 12px 15px;
+        font-size: 1rem;
+        color: rgba(255, 255, 255, 0.95);
+        font-family: 'Montserrat', sans-serif;
+        transition: all 0.2s ease;
+      }
+
+      .form-group input:focus, .form-group textarea:focus {
+        outline: none;
+        border-color: rgba(255, 182, 193, 0.6);
+        background: rgba(255, 255, 255, 0.08);
+        box-shadow: 0 0 15px rgba(255, 182, 193, 0.2);
+      }
+
+      .form-group textarea {
+        resize: vertical;
+        min-height: 80px;
+      }
+
+      .request-submit-btn {
+        background: linear-gradient(135deg, rgba(255, 182, 193, 0.8), rgba(255, 150, 180, 0.8));
+        border: none;
+        border-radius: 12px;
+        padding: 14px 24px;
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: rgba(255, 255, 255, 0.98);
+        cursor: pointer;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 15px rgba(255, 182, 193, 0.4);
+        margin-top: 10px;
+      }
+
+      .request-submit-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(255, 182, 193, 0.6);
+      }
+
+      .request-submit-btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+
+      .request-success {
+        text-align: center;
+        padding: 40px 20px;
+      }
+
+      .success-icon {
+        width: 80px;
+        height: 80px;
+        margin: 0 auto 20px;
+        background: linear-gradient(135deg, rgba(255, 182, 193, 0.8), rgba(255, 150, 180, 0.8));
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 40px;
+        color: white;
+        animation: success-pop 0.5s ease;
+      }
+
+      @keyframes success-pop {
+        0% { transform: scale(0); }
+        50% { transform: scale(1.1); }
+        100% { transform: scale(1); }
+      }
+
+      .request-success p {
+        font-size: 1.2rem;
+        color: rgba(255, 255, 255, 0.95);
+        margin: 10px 0;
+      }
+
+      .success-subtitle {
+        font-size: 1rem !important;
+        color: rgba(255, 182, 193, 0.8) !important;
+      }
+
       /* Mobile Responsive */
       @media (max-width: 768px) {
         .music-player {
@@ -647,6 +939,22 @@ export class MusicPlayer {
 
         .player-visualizer {
           height: 50px;
+        }
+
+        .player-tracklist-modal, .player-request-modal {
+          width: 95%;
+          max-height: 60vh;
+          top: 40%;
+        }
+
+        .request-content {
+          padding: 16px;
+          max-height: calc(60vh - 80px);
+        }
+
+        .player-btn-full {
+          padding: 8px 16px;
+          font-size: 16px;
         }
       }
 
@@ -782,6 +1090,26 @@ export class MusicPlayer {
       });
     });
 
+    // Garden button
+    const gardenBtn = this.element.querySelector('.player-garden');
+    if (gardenBtn) {
+      gardenBtn.addEventListener('click', () => {
+        if (this.onGardenToggle) {
+          this.onGardenToggle();
+        }
+
+        // Add tactile feedback
+        gsap.to(gardenBtn, {
+          scale: 0.9,
+          rotation: 360,
+          duration: 0.3,
+          yoyo: true,
+          repeat: 1,
+          ease: 'back.out(2)'
+        });
+      });
+    }
+
     // Shuffle
     const shuffleBtn = this.element.querySelector('.player-shuffle');
     shuffleBtn.addEventListener('click', () => {
@@ -848,6 +1176,150 @@ export class MusicPlayer {
     // Minimize
     const minimizeBtn = this.element.querySelector('.player-minimize-btn');
     minimizeBtn.addEventListener('click', () => this.toggleMinimize());
+
+    // Track List button
+    const tracklistBtn = this.element.querySelector('.player-tracklist');
+    const tracklistModal = this.element.querySelector('.player-tracklist-modal');
+    const tracklistClose = this.element.querySelector('.tracklist-close');
+
+    tracklistBtn.addEventListener('click', () => {
+      tracklistModal.style.display = 'block';
+      gsap.fromTo(tracklistModal,
+        { scale: 0.9, opacity: 0 },
+        { scale: 1, opacity: 1, duration: 0.3, ease: 'back.out(1.7)' }
+      );
+    });
+
+    tracklistClose.addEventListener('click', () => this.closeModal(tracklistModal));
+
+    // Track item clicks
+    const trackItems = this.element.querySelectorAll('.track-item');
+    trackItems.forEach(item => {
+      item.addEventListener('click', (e) => {
+        const index = parseInt(item.dataset.trackIndex);
+        this.music.playTrackByIndex(index);
+        this.closeModal(tracklistModal);
+        setTimeout(() => this.reinitializeVisualizer(), 100);
+      });
+    });
+
+    // Song Request button
+    const requestBtn = this.element.querySelector('.player-request');
+    const requestModal = this.element.querySelector('.player-request-modal');
+    const requestClose = this.element.querySelector('.request-close');
+
+    requestBtn.addEventListener('click', () => {
+      requestModal.style.display = 'block';
+      gsap.fromTo(requestModal,
+        { scale: 0.9, opacity: 0 },
+        { scale: 1, opacity: 1, duration: 0.3, ease: 'back.out(1.7)' }
+      );
+    });
+
+    requestClose.addEventListener('click', () => this.closeModal(requestModal));
+
+    // Song Request Form submission
+    const requestForm = this.element.querySelector('.song-request-form');
+    requestForm.addEventListener('submit', (e) => this.handleSongRequest(e));
+  }
+
+  closeModal(modal) {
+    gsap.to(modal, {
+      scale: 0.9,
+      opacity: 0,
+      duration: 0.2,
+      ease: 'power2.in',
+      onComplete: () => {
+        modal.style.display = 'none';
+      }
+    });
+  }
+
+  async handleSongRequest(e) {
+    e.preventDefault();
+
+    const form = e.target;
+    const submitBtn = form.querySelector('.request-submit-btn');
+    const formData = new FormData(form);
+
+    const songName = formData.get('songName');
+    const artist = formData.get('artist');
+    const message = formData.get('message');
+
+    // Disable button
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Sending...';
+
+    try {
+      const web3FormsData = {
+        access_key: 'eafc242f-6c42-4d16-9253-28c7b6969aa7',
+        subject: '🎤 SONG REQUEST FROM MILA! 🎵',
+        from_name: "Mila's World - Music Player",
+        to: 'terrell.flautt@gmail.com',
+        message: `
+╔══════════════════════════════════════╗
+║   🎤 SONG REQUEST FROM MILA! 🎵      ║
+╚══════════════════════════════════════╝
+
+SONG: ${songName}
+ARTIST: ${artist}
+
+${message ? `MILA'S MESSAGE:\n${message}` : '(No message)'}
+
+══════════════════════════════════════
+
+📅 Submitted: ${new Date().toLocaleString()}
+
+══════════════════════════════════════
+
+Time to add this to the playlist! 🎶
+        `
+      };
+
+      const response = await fetch('https://api.web3forms.com/submit', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(web3FormsData)
+      });
+
+      const result = await response.json();
+
+      if (!result.success) {
+        throw new Error(result.message || 'Failed to send song request');
+      }
+
+      // Show success
+      form.style.display = 'none';
+      const successDiv = this.element.querySelector('.request-success');
+      successDiv.style.display = 'block';
+
+      gsap.fromTo(successDiv,
+        { scale: 0.8, opacity: 0 },
+        { scale: 1, opacity: 1, duration: 0.5, ease: 'back.out(1.7)' }
+      );
+
+      // Auto-close after 3 seconds
+      setTimeout(() => {
+        const modal = this.element.querySelector('.player-request-modal');
+        this.closeModal(modal);
+        // Reset form
+        setTimeout(() => {
+          form.reset();
+          form.style.display = 'flex';
+          successDiv.style.display = 'none';
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Submit Request 💕';
+        }, 300);
+      }, 3000);
+
+    } catch (error) {
+      console.error('Failed to submit song request:', error);
+      alert('Oops! Something went wrong. Please try again.');
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Submit Request 💕';
+    }
   }
 
   seekToPosition(e) {
@@ -1039,5 +1511,27 @@ export class MusicPlayer {
         this.element.remove();
       }
     });
+  }
+
+  /**
+   * Unlock the garden button after Eternal Garden is discovered
+   */
+  unlockGarden() {
+    this.gardenUnlocked = true;
+    const gardenBtn = this.element?.querySelector('.player-garden');
+    if (gardenBtn) {
+      gardenBtn.style.display = '';
+      // Animate the button appearing
+      gsap.fromTo(gardenBtn,
+        { scale: 0, opacity: 0, rotation: -180 },
+        {
+          scale: 1,
+          opacity: 1,
+          rotation: 0,
+          duration: 0.8,
+          ease: 'back.out(2)'
+        }
+      );
+    }
   }
 }

@@ -34,29 +34,8 @@ export class GalleryOfUs {
       }
     }
 
-    // If no saved photos, start with default photos from our first date
-    if (localPhotos.length === 0) {
-      localPhotos = [
-        {
-          type: 'uploaded',
-          url: '/gallery/tk-selfie.jpg',
-          caption: 'The beginning of our story...',
-          isDefault: true
-        },
-        {
-          type: 'uploaded',
-          url: '/gallery/tk1-first-date.jpg',
-          caption: 'Our first date together 💕',
-          isDefault: true
-        },
-        {
-          type: 'uploaded',
-          url: '/gallery/tk2-first-date.jpg',
-          caption: 'Making memories from day one ✨',
-          isDefault: true
-        }
-      ];
-    }
+    // Start with empty gallery - she builds it herself by uploading photos
+    // No default photos shown until she adds her own memories
 
     // Try to sync with S3 (non-blocking, will use local if sync fails)
     try {
@@ -129,8 +108,9 @@ export class GalleryOfUs {
           <div class="gallery-title">Gallery of Us</div>
           <div class="gallery-subtitle">A place to keep our memories</div>
           <div class="gallery-description">
-            Every moment we share deserves to be remembered.<br>
-            Watch as our story unfolds, one memory at a time.
+            ${this.photos.length === 0
+              ? 'Start building your collection of memories.<br>Upload photos and they\'ll be saved across all your devices.'
+              : 'Every moment we share deserves to be remembered.<br>Watch as our story unfolds, one memory at a time.'}
           </div>
         </div>
 
@@ -565,6 +545,17 @@ export class GalleryOfUs {
     exitBtn?.addEventListener('click', () => {
       this.hide();
     });
+
+    // Add click handlers to photo frames to show fullscreen
+    const photoFrames = this.element.querySelectorAll('.photo-frame');
+    photoFrames.forEach((frame, index) => {
+      frame.addEventListener('click', () => {
+        const photo = this.photos[index];
+        if (photo && photo.url) {
+          this.showFullscreenPhoto(photo, index);
+        }
+      });
+    });
   }
 
   /**
@@ -764,6 +755,128 @@ export class GalleryOfUs {
     setTimeout(() => {
       this.hide();
     }, 1500);
+  }
+
+  /**
+   * Show photo in fullscreen overlay
+   */
+  showFullscreenPhoto(photo, index) {
+    const overlay = document.createElement('div');
+    overlay.className = 'photo-fullscreen-overlay';
+    overlay.innerHTML = `
+      <div class="fullscreen-photo-container">
+        <img src="${photo.url}" alt="Memory ${index + 1}" class="fullscreen-photo">
+        ${photo.caption ? `<div class="fullscreen-caption">${photo.caption}</div>` : ''}
+        <button class="fullscreen-close">×</button>
+      </div>
+
+      <style>
+        .photo-fullscreen-overlay {
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background: rgba(0, 0, 0, 0.95);
+          z-index: 10000;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 20px;
+        }
+
+        .fullscreen-photo-container {
+          position: relative;
+          max-width: 95vw;
+          max-height: 95vh;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 1rem;
+        }
+
+        .fullscreen-photo {
+          max-width: 100%;
+          max-height: 85vh;
+          object-fit: contain;
+          border-radius: 8px;
+          box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        }
+
+        .fullscreen-caption {
+          font-family: 'Cormorant Garamond', serif;
+          font-size: 1.5rem;
+          color: rgba(255, 255, 255, 0.9);
+          text-align: center;
+          font-style: italic;
+        }
+
+        .fullscreen-close {
+          position: absolute;
+          top: -15px;
+          right: -15px;
+          width: 50px;
+          height: 50px;
+          border-radius: 50%;
+          background: rgba(255, 255, 255, 0.1);
+          border: 2px solid rgba(255, 255, 255, 0.3);
+          color: white;
+          font-size: 2rem;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: all 0.3s ease;
+          font-family: Arial, sans-serif;
+          line-height: 1;
+        }
+
+        .fullscreen-close:hover {
+          background: rgba(255, 255, 255, 0.2);
+          border-color: rgba(255, 255, 255, 0.5);
+          transform: scale(1.1);
+        }
+
+        @media (max-width: 768px) {
+          .fullscreen-photo {
+            max-height: 80vh;
+          }
+
+          .fullscreen-caption {
+            font-size: 1.2rem;
+          }
+
+          .fullscreen-close {
+            top: 10px;
+            right: 10px;
+          }
+        }
+      </style>
+    `;
+
+    document.body.appendChild(overlay);
+
+    // Close handlers
+    const closeBtn = overlay.querySelector('.fullscreen-close');
+    const closeOverlay = () => {
+      gsap.to(overlay, {
+        opacity: 0,
+        duration: 0.3,
+        ease: 'power2.in',
+        onComplete: () => overlay.remove()
+      });
+    };
+
+    closeBtn.addEventListener('click', closeOverlay);
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) closeOverlay();
+    });
+
+    // Animate in
+    gsap.fromTo(overlay,
+      { opacity: 0 },
+      { opacity: 1, duration: 0.3, ease: 'power2.out' }
+    );
   }
 
   /**

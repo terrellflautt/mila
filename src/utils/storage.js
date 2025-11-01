@@ -264,10 +264,11 @@ export function isFinalExperienceUnlocked() {
     'Choreographer',
     'Gallery of Us',
     'The Dialogue',
-    // 'Constellation You',  // Disabled while testing
+    'Constellation You',
     'Mirror of Moments',
     'Grace',
-    'Stage Light'
+    'Monuments of Love'
+    // Stage Light is bonus epilogue, not required
   ];
 
   return requiredExperiences.every(exp => progress.completedPuzzles.includes(exp));

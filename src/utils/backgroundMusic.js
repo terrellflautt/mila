@@ -64,6 +64,11 @@ export class BackgroundMusic {
         artist: 'Childish Gambino'
       },
       {
+        url: '/music/Childish Gambino - The Night Me and Your Mama Met ft. Gary Clark Jr. (Official Audio).mp3',
+        title: 'The Night Me and Your Mama Met ft. Gary Clark Jr.',
+        artist: 'Childish Gambino'
+      },
+      {
         url: '/music/Kid Cudi - Erase Me ft. Kanye West (320 KBps).mp3',
         title: 'Erase Me ft. Kanye West',
         artist: 'Kid Cudi'

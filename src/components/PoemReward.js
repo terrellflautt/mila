@@ -57,7 +57,6 @@ export class PoemReward {
                 So instead, I'll share these with you.
               </div>
             </div>
-            <div class="poem-favorite-badge">Her Favorite ♥</div>
           ` : ''}
 
           <div class="poem-header">

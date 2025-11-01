@@ -69,7 +69,6 @@ class MilasWorld {
         discoveryElement: 'paint',     // Flower petal
         discoveryColor: '#FFB6C1'      // Pink
       },
-
       // More hidden experiences to discover
       'Reflections': {
         class: ReflectionsOfYou,
@@ -112,7 +111,6 @@ class MilasWorld {
         icon: '⭐',
         description: 'Separate points that form something whole',
         hidden: true,
-        disabled: true,  // Testing on test.html first
         discoveryHint: 'The stars know your story...',
         discoveryElement: 'star',      // Yellow star (different from pink)
         discoveryColor: '#FFF44F'      // Bright yellow
@@ -129,7 +127,7 @@ class MilasWorld {
       'Grace': {
         class: Grace,
         icon: '🎸',
-        description: 'Mila\'s favorite',
+        description: 'Her favorite artist, her favorite album',
         hidden: true,
         discoveryHint: 'beautiful melodies linger in sacred spaces...',
         discoveryElement: 'shimmer',   // Musical shimmer
@@ -148,11 +146,27 @@ class MilasWorld {
         class: MonumentsOfLove,
         icon: '🏛️',
         description: 'A letter written in stone',
-        hidden: false,  // Always visible once unlocked
-        isFinal: true,  // Special final experience
+        hidden: true,  // Discovered sequentially after Grace
+        discoveryHint: 'Love leaves monuments...',
+        discoveryElement: 'shimmer',
         discoveryColor: '#FFD700'  // Gold
       }
     };
+
+    // Define the sequential order of experiences (Acts)
+    this.experienceOrder = [
+      'Echo Chamber',        // Act 1 - First experience, unlocks instrument
+      'Eternal Garden',      // Act 1 - Second experience, unlocks garden button
+      'Reflections',         // Act 2
+      'Choreographer',       // Act 2
+      'Gallery of Us',       // Act 2
+      'The Dialogue',        // Act 2
+      'Constellation You',   // Act 2
+      'Mirror of Moments',   // Act 3
+      'Grace',               // Act 3
+      'Monuments of Love',   // Act 3 - Grand finale
+      // 'Stage Light' - Bonus epilogue triggered by piano after Monuments
+    ];
 
     this.discoveredExperiences = this.loadDiscoveredExperiences();
   }
@@ -166,6 +180,40 @@ class MilasWorld {
   }
 
   /**
+   * Get the next experience that should be discoverable
+   * Returns null if all are discovered or if previous not completed
+   */
+  getNextDiscoverableExperience() {
+    // Find the first experience in order that hasn't been discovered yet
+    for (const expName of this.experienceOrder) {
+      const exp = this.experiences[expName];
+      if (!exp || exp.disabled || exp.testOnly) continue;
+
+      if (!this.discoveredExperiences.includes(expName)) {
+        // This is the next one to discover
+        // But check if the previous one is completed (except for the first one)
+        const indexInOrder = this.experienceOrder.indexOf(expName);
+        if (indexInOrder === 0) {
+          // First experience - always available
+          return expName;
+        } else {
+          // Check if previous experience is completed
+          const previousExpName = this.experienceOrder[indexInOrder - 1];
+          if (isPuzzleCompleted(previousExpName)) {
+            return expName;
+          } else {
+            // Previous not completed yet - can't discover this one
+            return null;
+          }
+        }
+      }
+    }
+
+    // All experiences discovered
+    return null;
+  }
+
+  /**
    * Mark an experience as discovered
    */
   markExperienceDiscovered(name) {
@@ -173,6 +221,11 @@ class MilasWorld {
       this.discoveredExperiences.push(name);
       localStorage.setItem(getStorageKey('world-discovered'), JSON.stringify(this.discoveredExperiences));
       this.showDiscoveryAnimation(name);
+
+      // Unlock garden button in music player when Eternal Garden is discovered
+      if (name === 'Eternal Garden' && this.musicPlayer) {
+        this.musicPlayer.unlockGarden();
+      }
     }
   }
 
@@ -180,11 +233,6 @@ class MilasWorld {
    * Check if experience is visible (only if discovered)
    */
   isExperienceVisible(name) {
-    // Special case: Monuments of Love only visible when all others are completed
-    if (name === 'Monuments of Love') {
-      return isFinalExperienceUnlocked();
-    }
-
     return this.discoveredExperiences.includes(name);
   }
 
@@ -594,8 +642,10 @@ class MilasWorld {
       }
     );
 
-    // Show musical instrument if unlocked
-    if (isPuzzleCompleted('Echo Chamber')) {
+    // Show musical instrument if Echo Chamber completed BUT not yet played
+    // (Piano should only appear once, not on every page load)
+    const hasPlayedPiano = localStorage.getItem(getStorageKey('piano-played')) === 'true';
+    if (isPuzzleCompleted('Echo Chamber') && !hasPlayedPiano) {
       this.showMusicalInstrument();
     }
 
@@ -606,6 +656,14 @@ class MilasWorld {
         await this.backgroundMusic.start();
         this.musicPlayer = new MusicPlayer(this.backgroundMusic);
         this.musicPlayer.onVisualToggle = () => this.toggleVisualExperience();
+        this.musicPlayer.onGardenToggle = () => this.toggleGardenExperience();
+
+        // Unlock garden button if Eternal Garden is already discovered
+        // IMPORTANT: Set this BEFORE show() so HTML is generated correctly
+        if (this.discoveredExperiences.includes('Eternal Garden')) {
+          this.musicPlayer.gardenUnlocked = true;
+        }
+
         this.musicPlayer.show();
       }, 1000);
     }
@@ -640,9 +698,24 @@ class MilasWorld {
     const ui = document.createElement('div');
     ui.className = 'main-ui';
 
-    // Only show experiences that are visible and NOT completed
+    // Check if all experiences are complete
+    const allComplete = this.experienceOrder.every(expName => isPuzzleCompleted(expName)) &&
+                       isPuzzleCompleted('Stage Light');
+
+    // If all complete: show ALL discovered experiences (for replaying)
+    // If not complete: only show incomplete discovered experiences (one at a time)
     const experienceCards = Object.entries(this.experiences)
-      .filter(([name]) => this.isExperienceVisible(name) && !isPuzzleCompleted(name))
+      .filter(([name]) => {
+        if (!this.isExperienceVisible(name)) return false;
+
+        if (allComplete) {
+          // Show all discovered experiences for replaying
+          return true;
+        } else {
+          // Only show incomplete experiences (current one to work on)
+          return !isPuzzleCompleted(name);
+        }
+      })
       .map(([name, exp]) => {
         const isFinal = exp.isFinal ? 'final-experience' : '';
         return `
@@ -709,7 +782,11 @@ class MilasWorld {
 
     // Experience card clicks and 3D tilt effects
     const cards = ui.querySelectorAll('.experience-card');
+    console.log('🎴 Setting up', cards.length, 'experience cards with click handlers');
     cards.forEach(card => {
+      const experienceName = card.dataset.experience;
+      console.log('  - Card:', experienceName);
+
       // Add 3D tilt effect
       add3DTilt(card, {
         maxTilt: 10,
@@ -718,8 +795,14 @@ class MilasWorld {
       });
 
       // Click handler
-      card.addEventListener('click', () => {
-        const experienceName = card.dataset.experience;
+      card.addEventListener('click', (event) => {
+        console.log('🖱️ Card clicked:', experienceName);
+        console.log('🖱️ Event details:', {
+          type: event.type,
+          target: event.target.className,
+          isTrusted: event.isTrusted,
+          currentTarget: event.currentTarget.className
+        });
         this.startIndividualExperience(experienceName);
       });
     });
@@ -847,19 +930,34 @@ class MilasWorld {
    * Start an individual experience (puzzle)
    */
   startIndividualExperience(name) {
-    if (this.currentActivePuzzle) return; // Already in an experience
+    console.log('🎯 startIndividualExperience called for:', name);
+    console.log('📍 Call stack:', new Error().stack);
+
+    if (this.currentActivePuzzle) {
+      console.log('⚠️ Already in an experience, ignoring click');
+      return; // Already in an experience
+    }
 
     const experience = this.experiences[name];
-    if (!experience) return;
+    if (!experience) {
+      console.log('❌ Experience not found:', name);
+      return;
+    }
+
+    // Check if already completed
+    const isCompleted = isPuzzleCompleted(name);
+    console.log('✅ Opening experience:', name, '| Already completed:', isCompleted);
 
     // Duck background music to 5% so experience audio can be heard clearly
     this.backgroundMusic.duck(0.05, 1000);
 
     const puzzle = new experience.class(() => {
+      console.log('🎉 Puzzle callback triggered for:', name);
       this.onExperienceComplete(name);
     });
 
     this.currentActivePuzzle = puzzle;
+    console.log('🎮 Setting currentActivePuzzle to:', name);
     puzzle.show();
   }
 
@@ -868,6 +966,7 @@ class MilasWorld {
    */
   onExperienceComplete(name) {
     console.log('🎉 onExperienceComplete called for:', name);
+    console.log('🎮 Clearing currentActivePuzzle (was:', this.currentActivePuzzle ? 'active' : 'null', ')');
     this.currentActivePuzzle = null;
 
     // Restore background music volume
@@ -944,6 +1043,7 @@ class MilasWorld {
           // Show poem reward
           const poemReward = new PoemReward(poem, () => {
             console.log('📖 Poem closed by user');
+            console.log('🎮 currentActivePuzzle status:', this.currentActivePuzzle ? 'STILL ACTIVE (BUG!)' : 'null (correct)');
 
             // Mark poem as seen
             markPoemAsSeen(name, index);
@@ -971,6 +1071,14 @@ class MilasWorld {
                   this.musicPlayer = new MusicPlayer(this.backgroundMusic);
                   // Wire up visual experience toggle
                   this.musicPlayer.onVisualToggle = () => this.toggleVisualExperience();
+                  this.musicPlayer.onGardenToggle = () => this.toggleGardenExperience();
+
+                  // Unlock garden button if Eternal Garden is already discovered
+                  // IMPORTANT: Set this BEFORE show() so HTML is generated correctly
+                  if (this.discoveredExperiences.includes('Eternal Garden')) {
+                    this.musicPlayer.gardenUnlocked = true;
+                  }
+
                   // Show the player so she can control the music
                   this.musicPlayer.show();
                 }, 1500);
@@ -984,22 +1092,34 @@ class MilasWorld {
               }, 1000);
             }
 
-            // Restart discovery elements if there are more hidden experiences to find
+            // Check if there's a next sequential experience to discover
             setTimeout(() => {
-              const remainingHidden = Object.entries(this.experiences)
-                .filter(([n, exp]) => exp.hidden && !exp.disabled && !this.discoveredExperiences.includes(n) && !exp.isFinal);
+              const nextExpName = this.getNextDiscoverableExperience();
 
-              if (remainingHidden.length > 0) {
-                console.log('🌟 Restarting discovery elements - remaining:', remainingHidden.length);
+              console.log('🔍 Checking for next sequential experience after', name, 'completion');
+              console.log('🔍 Next experience:', nextExpName || 'NONE');
 
-                // If container exists, just update the list and create new wandering star
+              if (nextExpName) {
+                console.log('🌟 Next sequential experience available:', nextExpName);
+
+                // Create discovery element for the next experience
                 if (this.discoveryContainer) {
-                  this.hiddenExperiences = remainingHidden;
                   this.currentDiscoveryWanderingStopped = false;
                   this.createWanderingDiscoveryElement();
                 } else {
                   // Container doesn't exist, create it fresh
                   this.createDiscoveryElements();
+                }
+              } else {
+                console.log('✅ No more sequential experiences available');
+
+                // Check if this was Monuments of Love completing
+                // If so, show piano for Stage Light bonus epilogue
+                if (name === 'Monuments of Love' && !this.musicalInstrument) {
+                  console.log('🎹 Monuments complete! Showing piano for Stage Light bonus...');
+                  setTimeout(() => {
+                    this.showMusicalInstrument();
+                  }, 2000);
                 }
               }
             }, 2000);
@@ -1013,17 +1133,61 @@ class MilasWorld {
 
   /**
    * Handle when the musical instrument is played
-   * Shows either an undiscovered experience or a poem as reward
+   * First time: After Echo Chamber → reveals Eternal Garden
+   * Second time: After Monuments → reveals Stage Light (bonus epilogue)
    */
   onInstrumentPlayed() {
-    // Check if there are undiscovered experiences
-    const undiscoveredExperiences = Object.entries(this.experiences)
-      .filter(([name, exp]) => exp.hidden && !exp.disabled && !this.discoveredExperiences.includes(name) && !exp.isFinal);
+    console.log('🎹 Piano played!');
+    console.log('🎹 Completed puzzles:', getProgress().completedPuzzles);
+    console.log('🎹 Discovered experiences:', this.discoveredExperiences);
 
-    if (undiscoveredExperiences.length > 0) {
-      // Reveal a random undiscovered experience
-      const randomIndex = Math.floor(Math.random() * undiscoveredExperiences.length);
-      const [experienceName] = undiscoveredExperiences[randomIndex];
+    // Check if this is the second piano (after Monuments)
+    const monumentsComplete = isPuzzleCompleted('Monuments of Love');
+    const stageLightDiscovered = this.discoveredExperiences.includes('Stage Light');
+
+    console.log('🎹 Monuments complete:', monumentsComplete);
+    console.log('🎹 Stage Light discovered:', stageLightDiscovered);
+
+    if (monumentsComplete && !stageLightDiscovered) {
+      // Second piano: Reveal Stage Light as bonus epilogue
+      console.log('🎹 Piano played after Monuments! Revealing Stage Light bonus...');
+
+      this.markExperienceDiscovered('Stage Light');
+
+      // Refresh gallery to show Stage Light card
+      setTimeout(() => {
+        const ui = document.querySelector('.main-ui');
+        if (ui) {
+          const newUI = this.createGalleryUI();
+          ui.replaceWith(newUI);
+
+          gsap.fromTo(newUI,
+            { opacity: 0 },
+            { opacity: 1, duration: 1, ease: 'power2.out' }
+          );
+        }
+      }, 1500);
+
+      // Hide piano
+      setTimeout(() => {
+        if (this.musicalInstrument) {
+          this.musicalInstrument.hide();
+          this.musicalInstrument = null;
+        }
+      }, 2000);
+
+      return;
+    }
+
+    // First piano: Normal sequential discovery flow
+    // Mark piano as played so it doesn't show again on page reload
+    localStorage.setItem(getStorageKey('piano-played'), 'true');
+
+    // Get the next sequential experience to discover
+    const experienceName = this.getNextDiscoverableExperience();
+
+    if (experienceName) {
+      // Reveal the next sequential experience
       this.markExperienceDiscovered(experienceName);
 
       // Refresh the gallery UI to show the new card
@@ -1040,37 +1204,20 @@ class MilasWorld {
           );
         }
 
-        // Check if there are more hidden experiences to discover
-        setTimeout(() => {
-          const remaining = Object.entries(this.experiences)
-            .filter(([n, exp]) => exp.hidden && !exp.disabled && !this.discoveredExperiences.includes(n) && !exp.isFinal);
-
-          if (remaining.length > 0) {
-            // If container exists, just update the list and create new wandering star
-            if (this.discoveryContainer) {
-              this.hiddenExperiences = remaining;
-              this.currentDiscoveryWanderingStopped = false;
-              this.createWanderingDiscoveryElement();
-            } else {
-              // Container doesn't exist, create it fresh
-              this.createDiscoveryElements();
-            }
-          }
-        }, 2000);
+        // Don't create next discovery element yet
+        // Wait for them to COMPLETE the current puzzle first
+        // (Next element will be created in onExperienceComplete)
+        console.log('⏳ Waiting for puzzle completion before showing next discovery element');
       }, 1500);
-    } else {
-      // All experiences discovered, show a poem/message with curtain reveal
-      if (this.messageReveal) {
-        this.messageReveal.reveal(this.visitorId);
-      }
     }
 
-    // Auto-minimize piano after a delay
+    // HIDE the piano after playing (not just minimize)
     setTimeout(() => {
-      if (this.musicalInstrument && !this.musicalInstrument.isCollapsed) {
-        this.musicalInstrument.toggleCollapse();
+      if (this.musicalInstrument) {
+        this.musicalInstrument.hide();
+        this.musicalInstrument = null;
       }
-    }, 3000);
+    }, 2000);
   }
 
   /**
@@ -1089,11 +1236,29 @@ class MilasWorld {
   }
 
   /**
+   * Toggle the Eternal Garden experience from music player
+   */
+  toggleGardenExperience() {
+    console.log('🌸 Garden button clicked!');
+    console.log('🌸 Garden experience exists:', !!this.experiences['Eternal Garden']);
+    console.log('🌸 Garden discovered:', this.discoveredExperiences.includes('Eternal Garden'));
+    console.log('🌸 Current active puzzle:', this.currentActivePuzzle ? 'YES' : 'NO');
+
+    const gardenExperience = this.experiences['Eternal Garden'];
+    if (gardenExperience && this.discoveredExperiences.includes('Eternal Garden')) {
+      console.log('✅ Opening Eternal Garden...');
+      this.startIndividualExperience('Eternal Garden');
+    } else {
+      console.log('❌ Cannot open garden - not discovered or doesn\'t exist');
+    }
+  }
+
+  /**
    * Create peaceful discovery elements throughout the stage
    */
   createDiscoveryElements() {
     const hiddenExperiences = Object.entries(this.experiences)
-      .filter(([name, exp]) => exp.hidden && !exp.disabled && !this.discoveredExperiences.includes(name));
+      .filter(([name, exp]) => exp.hidden && !exp.disabled && !exp.testOnly && !this.discoveredExperiences.includes(name));
 
     if (hiddenExperiences.length === 0) return; // All discovered
 
@@ -1213,11 +1378,44 @@ class MilasWorld {
    * Create a wandering discovery element that fades in/out and moves
    */
   createWanderingDiscoveryElement() {
-    if (!this.hiddenExperiences || this.hiddenExperiences.length === 0) return;
+    // FIXED: Only allow ONE discovery element at a time (star OR piano OR curtain)
+    if (this.currentDiscoveryElement && this.currentDiscoveryElement.parentNode) {
+      console.log('🌟 Discovery element already active, not creating another');
+      return;
+    }
 
-    // Pick a RANDOM hidden experience (no longer in order!)
-    const randomIndex = Math.floor(Math.random() * this.hiddenExperiences.length);
-    const [name, exp] = this.hiddenExperiences[randomIndex];
+    // Also check if piano is showing
+    if (this.musicalInstrument) {
+      console.log('🎹 Piano already active, not creating discovery element');
+      return;
+    }
+
+    // Get the next sequential experience that should be discoverable
+    const nextExpName = this.getNextDiscoverableExperience();
+
+    if (!nextExpName) {
+      console.log('🌟 No discoverable experience available (waiting for completion of previous)');
+      return;
+    }
+
+    // Randomly choose what to show: 90% discovery star, 10% curtain poem
+    const random = Math.random();
+
+    if (random < 0.10 && this.messageReveal && this.discoveredExperiences.length > 1) {
+      // Show curtain poem reveal instead (10% chance, after discovering 2+ experiences)
+      console.log('🎭 Showing curtain poem instead of discovery star');
+      this.messageReveal.reveal(this.visitorId);
+      return;
+    }
+
+    // Otherwise show regular discovery star (90% chance)
+    const name = nextExpName;
+    const exp = this.experiences[nextExpName];
+
+    if (!exp) {
+      console.log('🌟 Experience not found:', nextExpName);
+      return;
+    }
 
     // Use themed discovery element
     const element = createThemedDiscoveryElement(
@@ -1233,6 +1431,9 @@ class MilasWorld {
 
     element.style.position = 'fixed';
     element.style.opacity = '0';
+
+    // FIXED: Store reference to current discovery element
+    this.currentDiscoveryElement = element;
 
     this.discoveryContainer.appendChild(element);
 
@@ -1269,6 +1470,7 @@ class MilasWorld {
 
   /**
    * Make a discovery star wander: fade in → stay → fade out → move → repeat
+   * ONLY if the previous puzzle is completed
    */
   wanderDiscoveryStar(element) {
     if (this.currentDiscoveryWanderingStopped) return;
@@ -1336,7 +1538,11 @@ class MilasWorld {
       scale: 1.5,
       duration: 1,
       ease: 'power2.out',
-      onComplete: () => element.remove()
+      onComplete: () => {
+        element.remove();
+        // FIXED: Clear reference so new star can spawn
+        this.currentDiscoveryElement = null;
+      }
     });
 
     // If this is the FIRST discovery ever, unlock the gallery
@@ -1364,20 +1570,10 @@ class MilasWorld {
         );
       }
 
-      // Check if there are more hidden experiences
-      setTimeout(() => {
-        const remaining = Object.entries(this.experiences)
-          .filter(([n, exp]) => exp.hidden && !exp.disabled && !this.discoveredExperiences.includes(n));
-
-        if (remaining.length > 0) {
-          // Update the hidden experiences list for random selection
-          this.hiddenExperiences = remaining;
-          this.currentDiscoveryWanderingStopped = false;
-
-          // Start a new wandering star (will pick random from remaining)
-          this.createWanderingDiscoveryElement();
-        }
-      }, 2000);
+      // Don't create next discovery element yet
+      // Wait for them to COMPLETE the current puzzle first
+      // (Next element will be created in onExperienceComplete)
+      console.log('⏳ Waiting for puzzle completion before showing next discovery element');
     }, 1500);
   }
 
