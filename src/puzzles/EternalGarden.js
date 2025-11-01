@@ -119,16 +119,41 @@ export class EternalGarden {
     this.atmosphericParticleSystem = null;
     this.butterflies = [];
 
-    // Day/night palette - enhanced with more vibrant colors
+    // Day/night palette - ENHANCED with breathtaking sunrise/sunset colors
     this.palette = {
-      dayTop: new THREE.Color(0x87CEEB),      // Sky blue
-      dayBottom: new THREE.Color(0xffeaa7),   // Soft yellow
-      dawnTop: new THREE.Color(0xFFB6C1),     // Light pink
-      dawnBottom: new THREE.Color(0xFFD4A3),  // Peach
-      duskTop: new THREE.Color(0xFF6B9D),     // Vibrant pink
-      duskBottom: new THREE.Color(0xFF8E53),  // Orange-rose
-      nightTop: new THREE.Color(0x1e3a8a),    // Deep navy blue
-      nightBottom: new THREE.Color(0x2d1b3d)  // Dark purple
+      // Midday - bright and cheerful
+      dayTop: new THREE.Color(0x4A90E2),        // Bright azure blue
+      dayBottom: new THREE.Color(0xFFE88C),     // Warm golden yellow
+
+      // Dawn (5-8 AM) - soft morning pastels
+      dawnTop: new THREE.Color(0xFFB4D6),       // Soft rose pink
+      dawnMiddle: new THREE.Color(0xFFD9B3),    // Peach cream
+      dawnBottom: new THREE.Color(0xFFEED9),    // Pale golden cream
+
+      // Sunrise (6-7 AM) - vibrant awakening
+      sunriseTop: new THREE.Color(0xFF6FA0),    // Coral pink
+      sunriseMiddle: new THREE.Color(0xFFB366), // Warm orange
+      sunriseBottom: new THREE.Color(0xFFE599), // Soft yellow
+
+      // Dusk/Golden Hour (17-20) - magical twilight
+      duskTop: new THREE.Color(0xFF4D88),       // Deep rose
+      duskMiddle: new THREE.Color(0xFF9966),    // Sunset orange
+      duskBottom: new THREE.Color(0xFFCC80),    // Warm amber
+
+      // Sunset (18-19) - most dramatic
+      sunsetTop: new THREE.Color(0xE64A8D),     // Magenta pink
+      sunsetMiddle: new THREE.Color(0xFF7F50),  // Coral
+      sunsetBottom: new THREE.Color(0xFFB347),  // Gold
+
+      // Twilight (19-21) - fading light
+      twilightTop: new THREE.Color(0x6B5B95),   // Purple haze
+      twilightMiddle: new THREE.Color(0x8B7BA8), // Lavender
+      twilightBottom: new THREE.Color(0xB8A8D0), // Pale violet
+
+      // Night - deep and mysterious
+      nightTop: new THREE.Color(0x0F1B3D),      // Deep midnight blue
+      nightMiddle: new THREE.Color(0x1A1A3E),   // Dark indigo
+      nightBottom: new THREE.Color(0x2D1B3D)    // Dark purple
     };
 
     // Shooting star system
@@ -1415,26 +1440,67 @@ export class EternalGarden {
   }
 
   updateSkyAndLighting(hour) {
-    // Smoother transitions
-    const normalized = (Math.sin((hour / 24) * Math.PI * 2 - Math.PI / 2) + 1) / 2;
+    let top, middle, bottom;
 
-    // Determine if dusk/dawn (golden hour)
-    const isDusk = (hour >= 17 && hour < 20) || (hour >= 5 && hour < 8);
-    const goldenBlend = isDusk ? Math.sin((hour - 17) / 3 * Math.PI) : 0;
-
-    let top, bottom;
-
-    if (isDusk && goldenBlend > 0) {
-      top = new THREE.Color().copy(this.palette.duskTop);
-      bottom = new THREE.Color().copy(this.palette.duskBottom);
+    // Determine time of day with smooth multi-color gradients
+    if (hour >= 5 && hour < 6.5) {
+      // Early dawn (5-6:30 AM) - soft pastels
+      const t = (hour - 5) / 1.5;
+      top = new THREE.Color().copy(this.palette.nightTop).lerp(this.palette.dawnTop, t);
+      middle = new THREE.Color().copy(this.palette.nightMiddle).lerp(this.palette.dawnMiddle, t);
+      bottom = new THREE.Color().copy(this.palette.nightBottom).lerp(this.palette.dawnBottom, t);
+    } else if (hour >= 6.5 && hour < 8) {
+      // Sunrise (6:30-8 AM) - vibrant awakening
+      const t = (hour - 6.5) / 1.5;
+      top = new THREE.Color().copy(this.palette.dawnTop).lerp(this.palette.sunriseTop, t);
+      middle = new THREE.Color().copy(this.palette.dawnMiddle).lerp(this.palette.sunriseMiddle, t);
+      bottom = new THREE.Color().copy(this.palette.dawnBottom).lerp(this.palette.sunriseBottom, t);
+    } else if (hour >= 8 && hour < 10) {
+      // Morning transition to day (8-10 AM)
+      const t = (hour - 8) / 2;
+      top = new THREE.Color().copy(this.palette.sunriseTop).lerp(this.palette.dayTop, t);
+      middle = new THREE.Color().copy(this.palette.sunriseMiddle).lerp(this.palette.dayBottom, t);
+      bottom = new THREE.Color().copy(this.palette.sunriseBottom).lerp(this.palette.dayBottom, t);
+    } else if (hour >= 10 && hour < 17) {
+      // Full day (10 AM - 5 PM) - bright and cheerful
+      top = this.palette.dayTop;
+      middle = new THREE.Color().copy(this.palette.dayTop).lerp(this.palette.dayBottom, 0.5);
+      bottom = this.palette.dayBottom;
+    } else if (hour >= 17 && hour < 18) {
+      // Golden hour begins (5-6 PM) - warm glow
+      const t = (hour - 17);
+      top = new THREE.Color().copy(this.palette.dayTop).lerp(this.palette.duskTop, t);
+      middle = new THREE.Color().copy(this.palette.dayBottom).lerp(this.palette.duskMiddle, t);
+      bottom = new THREE.Color().copy(this.palette.dayBottom).lerp(this.palette.duskBottom, t);
+    } else if (hour >= 18 && hour < 19) {
+      // Sunset peak (6-7 PM) - MOST DRAMATIC
+      const t = (hour - 18);
+      top = new THREE.Color().copy(this.palette.duskTop).lerp(this.palette.sunsetTop, t);
+      middle = new THREE.Color().copy(this.palette.duskMiddle).lerp(this.palette.sunsetMiddle, t);
+      bottom = new THREE.Color().copy(this.palette.duskBottom).lerp(this.palette.sunsetBottom, t);
+    } else if (hour >= 19 && hour < 21) {
+      // Twilight (7-9 PM) - fading into night
+      const t = (hour - 19) / 2;
+      top = new THREE.Color().copy(this.palette.sunsetTop).lerp(this.palette.twilightTop, t);
+      middle = new THREE.Color().copy(this.palette.sunsetMiddle).lerp(this.palette.twilightMiddle, t);
+      bottom = new THREE.Color().copy(this.palette.sunsetBottom).lerp(this.palette.twilightBottom, t);
+    } else if (hour >= 21 && hour < 22) {
+      // Late twilight to night (9-10 PM)
+      const t = (hour - 21);
+      top = new THREE.Color().copy(this.palette.twilightTop).lerp(this.palette.nightTop, t);
+      middle = new THREE.Color().copy(this.palette.twilightMiddle).lerp(this.palette.nightMiddle, t);
+      bottom = new THREE.Color().copy(this.palette.twilightBottom).lerp(this.palette.nightBottom, t);
     } else {
-      top = new THREE.Color().copy(this.palette.dayTop).lerp(this.palette.nightTop, 1 - normalized);
-      bottom = new THREE.Color().copy(this.palette.dayBottom).lerp(this.palette.nightBottom, 1 - normalized);
+      // Full night (10 PM - 5 AM) - deep and mysterious
+      top = this.palette.nightTop;
+      middle = this.palette.nightMiddle;
+      bottom = this.palette.nightBottom;
     }
 
-    // Draw gradient
+    // Draw THREE-STOP gradient for richer sky
     const gradient = this.bgContext.createLinearGradient(0, 0, 0, 256);
     gradient.addColorStop(0, '#' + top.getHexString());
+    gradient.addColorStop(0.5, '#' + middle.getHexString());
     gradient.addColorStop(1, '#' + bottom.getHexString());
     this.bgContext.fillStyle = gradient;
     this.bgContext.fillRect(0, 0, 2, 256);
@@ -1537,6 +1603,24 @@ export class EternalGarden {
     if (statsToggle && statsContent) {
       statsToggle.addEventListener('click', () => {
         statsContent.classList.toggle('open');
+      });
+    }
+
+    // Seeds panel toggle
+    const seedsToggle = this.element.querySelector('#seeds-toggle');
+    const seedsPanel = this.element.querySelector('#seeds-panel');
+    if (seedsToggle && seedsPanel) {
+      seedsToggle.addEventListener('click', () => {
+        seedsPanel.classList.toggle('open');
+      });
+    }
+
+    // Discoveries panel toggle
+    const discoveriesToggle = this.element.querySelector('#discoveries-toggle');
+    const discoveriesPanel = this.element.querySelector('#discoveries-panel');
+    if (discoveriesToggle && discoveriesPanel) {
+      discoveriesToggle.addEventListener('click', () => {
+        discoveriesPanel.classList.toggle('open');
       });
     }
   }
