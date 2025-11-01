@@ -1511,6 +1511,9 @@ export class EternalGarden {
       this.scene.fog.color.copy(bottom);
     }
 
+    // Calculate normalized day/night value for lighting (0 = night, 1 = day)
+    const normalized = (Math.sin((hour / 24) * Math.PI * 2 - Math.PI / 2) + 1) / 2;
+
     // Update lights
     const lightIntensity = Math.max(0.4, normalized);
     this.ambientLight.intensity = 0.4 + normalized * 0.5;
